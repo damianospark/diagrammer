@@ -1,0 +1,113 @@
+/* Tailwind v4 theme tokens: vibrant·young (OKLCH) */
+
+:root {
+  /* Vibrant palette */
+  --color-primary: oklch(0.70 0.20 300); /* Electric Violet */
+  --color-accent:  oklch(0.78 0.16 200); /* Cyan Azure */
+  --color-lime:    oklch(0.85 0.20 135); /* Neon Lime */
+  --color-coral:   oklch(0.75 0.14  30); /* Vibrant Coral */
+  --color-amber:   oklch(0.82 0.14  85); /* Fresh Amber */
+
+  /* Feedback */
+  --color-success: oklch(0.78 0.14 145);
+  --color-warning: oklch(0.82 0.12  90);
+  --color-danger:  oklch(0.62 0.18  25);
+
+  /* Surfaces & text (semantic vars used by shadcn tokens) */
+  --background:  oklch(0.99 0 0);
+  --foreground:  oklch(0.20 0 0);
+  --card:        oklch(0.99 0 0);
+  --card-foreground: oklch(0.20 0 0);
+  --popover:     oklch(0.99 0 0);
+  --popover-foreground: oklch(0.20 0 0);
+  --primary:     oklch(0.70 0.20 300);
+  --primary-foreground: oklch(0.10 0 0);
+  --secondary:   oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.22 0 0);
+  --muted:       oklch(0.94 0 0);
+  --muted-foreground: oklch(0.45 0.02 260);
+  --accent:      oklch(0.96 0 0);
+  --accent-foreground: oklch(0.22 0 0);
+  --destructive: oklch(0.62 0.18 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --ring:        oklch(0.70 0.20 300);
+  --input:       oklch(0.92 0 0);
+  --border:      oklch(0.92 0 0);
+
+  /* Additional tokens used internally */
+  --bg:    oklch(0.99 0 0);
+  --bg-e1: oklch(0.97 0 0);
+  --bg-e2: oklch(0.94 0 0);
+  --fg:    oklch(0.20 0 0);
+
+  /* Shape & motion */
+  --radius: 14px;
+  --easing: cubic-bezier(.2,.6,.2,1);
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 260ms;
+}
+
+:root.dark {
+  --bg:    oklch(0.13 0 0);
+  --bg-e1: oklch(0.16 0 0);
+  --bg-e2: oklch(0.20 0 0);
+  --fg:    oklch(0.93 0 0);
+  --muted: oklch(0.70 0.02 260);
+
+  /* Slightly toned down in dark */
+  --color-primary: oklch(0.72 0.18 300);
+  --color-accent:  oklch(0.76 0.14 200);
+  --color-lime:    oklch(0.82 0.16 135);
+  --color-coral:   oklch(0.70 0.12  30);
+  --color-amber:   oklch(0.78 0.12  85);
+
+  /* Semantic shadcn vars (dark) */
+  --background:  oklch(0.13 0 0);
+  --foreground:  oklch(0.93 0 0);
+  --card:        oklch(0.16 0 0);
+  --card-foreground: oklch(0.93 0 0);
+  --popover:     oklch(0.16 0 0);
+  --popover-foreground: oklch(0.93 0 0);
+  --primary:     oklch(0.72 0.18 300);
+  --primary-foreground: oklch(0.13 0 0);
+  --secondary:   oklch(0.20 0 0);
+  --secondary-foreground: oklch(0.93 0 0);
+  --muted:       oklch(0.20 0 0);
+  --muted-foreground: oklch(0.70 0.02 260);
+  --accent:      oklch(0.20 0 0);
+  --accent-foreground: oklch(0.93 0 0);
+  --destructive: oklch(0.40 0.12 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --ring:        oklch(0.72 0.18 300);
+  --input:       oklch(0.30 0 0);
+  --border:      oklch(0.30 0 0);
+}
+
+@theme {
+  /* Tailwind v4 color tokens (used by utilities like bg-*, text-*, border-*) */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+
+  /* Additional tokens for our internal use */
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --radius: var(--radius);
+}

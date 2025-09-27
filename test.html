@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagrammer - 간단한 테스트</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        .sidebar { width: 250px; }
+        .main-content { margin-left: 250px; }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .main-content { margin-left: 0; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="app"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [prompt, setPrompt] = useState('');
+            const [engine, setEngine] = useState('mermaid');
+            const [provider, setProvider] = useState('gemini');
+            const [diagram, setDiagram] = useState(null);
+            const [isLoading, setIsLoading] = useState(false);
+
+            useEffect(() => {
+                mermaid.initialize({ startOnLoad: false, theme: 'default' });
+            }, []);
+
+            const generateDiagram = async () => {
+                if (!prompt.trim()) {
+                    alert('프롬프트를 입력해주세요!');
+                    return;
+                }
+
+                setIsLoading(true);
+                try {
+                    const response = await fetch('http://localhost:8000/api/v1/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt, engine, provider })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    if (result.success) {
+                        setDiagram(result);
+                        // 다이어그램 렌더링
+                        setTimeout(() => updateDiagram(result.code, result.engine), 100);
+                    } else {
+                        alert('오류: ' + (result.error || '알 수 없는 오류'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('서버 연결 오류: ' + error.message);
+                }
+                setIsLoading(false);
+            };
+
+            const exportPNG = async () => {
+                if (!diagram) return;
+
+                try {
+                    const response = await fetch('http://localhost:8000/api/v1/exports', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ diagram_id: diagram.diagram_id, format: 'png' })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    alert('Export 완료! 파일: ' + result.storage_key);
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Export 오류: ' + error.message);
+                }
+            };
+
+            return (
+                <div className="flex h-screen bg-gray-100">
+                    {/* Sidebar */}
+                    <div className="sidebar bg-white shadow-lg p-6">
+                        <h1 className="text-2xl font-bold text-blue-600 mb-6">Diagrammer</h1>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">엔진 선택</label>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setEngine('mermaid')}
+                                    className={`px-3 py-1 rounded ${engine === 'mermaid' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                                >
+                                    Mermaid
+                                </button>
+                                <button
+                                    onClick={() => setEngine('visjs')}
+                                    className={`px-3 py-1 rounded ${engine === 'visjs' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                                >
+                                    vis.js
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">AI 제공자</label>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setProvider('gemini')}
+                                    className={`px-3 py-1 rounded ${provider === 'gemini' ? 'bg-green-500 text-white' : 'bg-gray-200'}`}
+                                >
+                                    Gemini
+                                </button>
+                                <button
+                                    onClick={() => setProvider('mock')}
+                                    className={`px-3 py-1 rounded ${provider === 'mock' ? 'bg-green-500 text-white' : 'bg-gray-200'}`}
+                                >
+                                    Mock
+                                </button>
+                            </div>
+                        </div>
+
+                        <textarea
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            placeholder="예: 사용자 로그인 플로우 다이어그램을 생성해주세요"
+                            className="w-full h-40 p-3 border rounded mb-4"
+                        />
+
+                        <button
+                            onClick={generateDiagram}
+                            disabled={isLoading}
+                            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+                        >
+                            {isLoading ? '생성 중...' : '다이어그램 생성'}
+                        </button>
+
+                        {diagram && (
+                            <button
+                                onClick={exportPNG}
+                                className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600 mt-2"
+                            >
+                                PNG Export
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="main-content flex-1 p-6">
+                        <div className="bg-white rounded-lg shadow p-6 h-full">
+                            {diagram ? (
+                                <div>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-xl font-bold">생성된 다이어그램</h2>
+                                        <div className="flex gap-2">
+                                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                                                {diagram.engine}
+                                            </span>
+                                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded">
+                                                {diagram.metadata?.provider || 'unknown'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {diagram.engine === 'mermaid' ? (
+                                        <div id="mermaid-container" className="border rounded p-4 bg-white"></div>
+                                    ) : (
+                                        <div id="visjs-container" className="border rounded p-4 bg-white h-96"></div>
+                                    )}
+
+                                    <div className="mt-4 p-4 bg-gray-50 rounded">
+                                        <h3 className="font-bold mb-2">코드:</h3>
+                                        <pre className="text-sm overflow-auto">{diagram.code}</pre>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-gray-500">
+                                    <div className="text-center">
+                                        <div className="text-6xl mb-4">📊</div>
+                                        <p>다이어그램을 생성하면 여기에 표시됩니다</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // React 18 createRoot 사용
+        const root = ReactDOM.createRoot(document.getElementById('app'));
+        root.render(<App />);
+
+        // 전역 함수로 다이어그램 업데이트
+        window.updateDiagram = function(code, engine) {
+            if (engine === 'mermaid') {
+                const container = document.getElementById('mermaid-container');
+                if (!container) return;
+
+                container.innerHTML = '';
+
+                mermaid.render('mermaid-diagram', code).then(result => {
+                    container.innerHTML = result.svg;
+                }).catch(error => {
+                    container.innerHTML = '<div class="text-red-500 p-4">Mermaid 렌더링 오류: ' + error.message + '</div>';
+                });
+            }
+        };
+    </script>
+</body>
+</html>
