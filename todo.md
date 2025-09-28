@@ -6,20 +6,20 @@
 
 ## 스프린트 0: 공통 준비 및 아키텍처 결정
 
-- [ ] 리포 구조 결정: `apps/web(Next.js)` / `apps/api(FastAPI)` / `packages/ui` / `packages/config`
-- [ ] 라이선스/README/기여가이드/코드오브컨덕트 추가
+- [x] 리포 구조 결정: `apps/web(Next.js)` / `apps/api(FastAPI)` / `packages/ui` / `packages/config`
+- [x] 라이선스/README/기여가이드/코드오브컨덕트 추가
 - [ ] 환경변수 표준화: `.env.example`(클라이언트/서버 분리), 보안 키/토큰 명세
-- [ ] 디자인 시스템 세팅: Tailwind(색상 토큰/타이포/간격 스케일), shadcn/ui 설치, Radix 프리미티브 채택
-- [ ] 테마: Light/Dark 토글 구현(기본 Light), 명암비 기준 확보(AA/AAA 체크)
-- [ ] 레이아웃: 좌측 사이드바 내비 + 토글, 헤더 유틸(언어/테마/프로필)
-- [ ] i18n: EN/KR 리소스 설계, 프론트(react-intl/next-intl 등) + 백엔드 로케일 협상 미들웨어
-- [ ] 접근성: eslint-plugin-jsx-a11y, ARIA 가이드, 키보드 내비, 포커스 링 스타일, 스킵 링크
-- [ ] 상태관리: 최소한(Zustand or Context)로 시작, React Query로 서버 상태 관리
-- [ ] API 규약: REST 우선(`/api/v1`), 일관된 에러 포맷(code, message, details)
-- [ ] 로깅/관측: 백엔드 구조적 로깅(JSON), 요청 ID 트레이싱, 프론트 에러 리포팅 훅
-- [ ] JSON 파일 DB 전략: 경로 구조/스키마 버전/락킹(파일 기반 RW 락)/쓰기 빈도 제한/롤오버 정책
-- [ ] 백그라운드 작업: FastAPI BackgroundTasks or Celery 대체(초기엔 단일 프로세스로 시작)
-- [ ] 보안: 전 구간 HTTPS 가정, JWT(짧은 수명) + Refresh, CORS/Rate limit 기본값
+- [x] 디자인 시스템 세팅: Tailwind(색상 토큰/타이포/간격 스케일), shadcn/ui 설치, Radix 프리미티브 채택
+- [x] 테마: Light/Dark 토글 구현(기본 Light), 명암비 기준 확보(AA/AAA 체크)
+- [x] 레이아웃: 좌측 사이드바 내비 + 토글, 헤더 유틸(언어/테마/프로필)
+- [x] i18n: EN/KR 리소스 설계, 프론트(react-intl/next-intl 등) + 백엔드 로케일 협상 미들웨어
+- [x] 접근성: eslint-plugin-jsx-a11y, ARIA 가이드, 키보드 내비, 포커스 링 스타일, 스킵 링크
+- [x] 상태관리: 최소한(Zustand or Context)로 시작, React Query로 서버 상태 관리
+- [x] API 규약: REST 우선(`/api/v1`), 일관된 에러 포맷(code, message, details)
+- [x] 로깅/관측: 백엔드 구조적 로깅(JSON), 요청 ID 트레이싱, 프론트 에러 리포팅 훅
+- [x] JSON 파일 DB 전략: 경로 구조/스키마 버전/락킹(파일 기반 RW 락)/쓰기 빈도 제한/롤오버 정책
+- [x] 백그라운드 작업: FastAPI BackgroundTasks or Celery 대체(초기엔 단일 프로세스로 시작)
+- [x] 보안: 전 구간 HTTPS 가정, JWT(짧은 수명) + Refresh, CORS/Rate limit 기본값
 - [ ] 테스트: 프론트 Vitest/Testing Library, e2e는 Playwright, 백엔드 Pytest(빠른 단위 테스트)
 - [ ] CI: Lint/Test/Build 파이프라인, 프리뷰 배포(브랜치)
 
@@ -28,32 +28,32 @@
 ## 단계 1: 코어(MVP) – 게스트 체험
 
 ### 백엔드(FastAPI)
-- [ ] 프로젝트 부트스트랩 및 기본 라우팅(`/healthz`)
-- [ ] LLM 어댑터 인터페이스 정의(`gemini`/`local` 플러그형), 개발용 Mock 구현
-- [ ] 엔드포인트
-  - [ ] POST `/api/v1/generate` 프롬프트 → Mermaid/vis.js 코드 생성(mock 사용)
-  - [ ] POST `/api/v1/diagrams` 게스트 다이어그램 저장(JSON DB, TTL 필드 포함)
-  - [ ] GET `/api/v1/diagrams/{id}` 조회(리드온리)
-  - [ ] POST `/api/v1/exports` PNG 메타 기록(파일 경로/키)
-- [ ] JSON 파일 DB 스키마
-  - [ ] `visitors.json`: `id, anon_id, created_at`
-  - [ ] `diagrams.json`: `id, visitor_id, engine, code, render_type='readonly', prompt, meta, ttl_expire_at, created_at`
-  - [ ] `exports.json`: `id, diagram_id, format='png', storage_key, created_at`
+- [x] 프로젝트 부트스트랩 및 기본 라우팅(`/healthz`)
+- [x] LLM 어댑터 인터페이스 정의(`gemini`/`local` 플러그형), 개발용 Mock 구현
+- [x] 엔드포인트
+  - [x] POST `/api/v1/generate` 프롬프트 → Mermaid/vis.js 코드 생성(mock 사용)
+  - [x] POST `/api/v1/diagrams` 게스트 다이어그램 저장(JSON DB, TTL 필드 포함)
+  - [x] GET `/api/v1/diagrams/{id}` 조회(리드온리)
+  - [x] POST `/api/v1/exports` PNG 메타 기록(파일 경로/키)
+- [x] JSON 파일 DB 스키마
+  - [x] `visitors.json`: `id, anon_id, created_at`
+  - [x] `diagrams.json`: `id, visitor_id, engine, code, render_type='readonly', prompt, meta, ttl_expire_at, created_at`
+  - [x] `exports.json`: `id, diagram_id, format='png', storage_key, created_at`
 - [ ] TTL 스위퍼: 만료 데이터 정리(앱 스타트 시 + 주기 작업)
 - [ ] 콘텐츠 안전 스텁: 비속어 감지 API 훅(로그만 저장)
-- [ ] 구조적 로깅 + 에러 핸들링 미들웨어
-- [ ] 외부에서 생성해온 차트 코드를 넣어도 캔버스에 보여줄 수 있는 자연스러운 인터페이스 제작 
+- [x] 구조적 로깅 + 에러 핸들링 미들웨어
+- [x] 외부에서 생성해온 차트 코드를 넣어도 캔버스에 보여줄 수 있는 자연스러운 인터페이스 제작 
 
 ### 프론트엔드(Next.js + Tailwind + shadcn/ui)
-- [ ] 앱 셋업(App Router), 글로벌 레이아웃, 좌측 사이드바 내비(토글)
-- [ ] 페이지: `홈`, `다이어그램(리드온리)`
-- [ ] 반응형: 입력/코드/히스토리 ↔ 뷰 탭 전환, 모바일에서 Export는 Bottom Sheet
-- [ ] 렌더러
-  - [ ] Mermaid 렌더(<100 노드)
-  - [ ] vis-network 렌더(≥100 노드) + 500+ 노드 성능 안전장치
-- [ ] PNG Export(html-to-image), Export 시 대체 텍스트(프롬프트 요약) 삽입
-- [ ] i18n(EN/KR) 문구 적용, 언어 스위처
-- [ ] 접근성: ARIA 레이블, 키보드 조작, 포커스 상태, 명암비 체크
+- [x] 앱 셋업(App Router), 글로벌 레이아웃, 좌측 사이드바 내비(토글)
+- [x] 페이지: `홈`, `다이어그램(리드온리)`
+- [x] 반응형: 입력/코드/히스토리 ↔ 뷰 탭 전환, 모바일에서 Export는 Bottom Sheet
+- [x] 렌더러
+  - [x] Mermaid 렌더(<100 노드)
+  - [x] vis-network 렌더(≥100 노드) + 500+ 노드 성능 안전장치
+- [x] PNG Export(html-to-image), Export 시 대체 텍스트(프롬프트 요약) 삽입
+- [x] i18n(EN/KR) 문구 적용, 언어 스위처
+- [x] 접근성: ARIA 레이블, 키보드 조작, 포커스 상태, 명암비 체크
 - [ ] 방문자 식별 쿠키/핑거프린트(간단 UUID)
 
 ### 테스트/릴리즈
@@ -62,8 +62,8 @@
 - [ ] 프리뷰 배포 및 QA 체크리스트 통과
 
 ### 수용 기준(DoD)
-- [ ] 게스트가 프롬프트로 생성/렌더/PNG 저장 가능
-- [ ] 크로스 디바이스 반응형 + 기본 접근성 기준 충족
+- [x] 게스트가 프롬프트로 생성/렌더/PNG 저장 가능
+- [x] 크로스 디바이스 반응형 + 기본 접근성 기준 충족
 - [ ] JSON DB TTL 동작 확인(만료 삭제)
 
 ---
