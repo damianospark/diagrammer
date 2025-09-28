@@ -14,12 +14,8 @@ export default function TaskWorkspacePage() {
       localStorage.setItem('tasks.currentId', id)
       const ev = new CustomEvent('tasks:select', { detail: { id } })
       window.dispatchEvent(ev)
-    } catch {}
+    } catch { }
   }, [id])
 
-  return (
-    <main className="w-full">
-      <Workspace />
-    </main>
-  )
+  return <Workspace />
 }

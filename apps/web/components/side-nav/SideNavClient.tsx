@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useI18n } from "@/hooks/i18n"
 import { cn } from "@/lib/utils"
-import { ChevronLeft, ChevronRight, Edit3, FolderKanban, LayoutDashboard, Menu, MoreVertical, PlusCircle, Search as SearchIcon, Share2 as ShareIcon, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Edit3, FolderKanban, LayoutDashboard, Menu, MoreVertical, PlusCircle, Search as SearchIcon, Share2 as ShareIcon, Trash2, Home, GripVertical } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -20,7 +20,8 @@ type Task = {
 }
 
 const navItems = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
+  { label: "홈", href: "/app", icon: Home },
+  { label: "Dashboard", href: "/app/statistics", icon: LayoutDashboard },
   { label: "Tasks", href: "/tasks", icon: FolderKanban },
   { label: "Shared Charts", href: "/shared", icon: ShareIcon },
 ]
@@ -40,13 +41,15 @@ export function SideNavClient() {
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null)
   const [renamingTaskId, setRenamingTaskId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState<string>("")
+  const [isHovered, setIsHovered] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState(256)
 
   // load persisted collapsed state
   useEffect(() => {
     try {
       const v = localStorage.getItem('sidebar.collapsed')
       if (v != null) setCollapsed(v === '1')
-    } catch {}
+    } catch { }
   }, [])
 
   function saveShared(next: Array<{ id: string; pin: string; title: string; url: string; createdAt: string }>) {
@@ -54,16 +57,16 @@ export function SideNavClient() {
     try {
       localStorage.setItem('shared.list', JSON.stringify(next))
       window.dispatchEvent(new CustomEvent('shared:updated'))
-    } catch {}
+    } catch { }
   }
 
   // listen current task changes
   useEffect(() => {
     const onSelect = (e: Event) => {
-      try { setCurrentTaskId((e as CustomEvent).detail?.id || null) } catch {}
+      try { setCurrentTaskId((e as CustomEvent).detail?.id || null) } catch { }
     }
     const onNew = (e: Event) => {
-      try { setCurrentTaskId((e as CustomEvent).detail?.id || null) } catch {}
+      try { setCurrentTaskId((e as CustomEvent).detail?.id || null) } catch { }
     }
     window.addEventListener('tasks:select' as any, onSelect as any)
     window.addEventListener('tasks:new' as any, onNew as any)
@@ -73,9 +76,16 @@ export function SideNavClient() {
     }
   }, [])
 
+  // clear current task when on home page
+  useEffect(() => {
+    if (pathname === '/app') {
+      setCurrentTaskId(null)
+    }
+  }, [pathname])
+
   // persist collapsed state
   useEffect(() => {
-    try { localStorage.setItem('sidebar.collapsed', collapsed ? '1' : '0') } catch {}
+    try { localStorage.setItem('sidebar.collapsed', collapsed ? '1' : '0') } catch { }
   }, [collapsed])
 
   // load tasks
@@ -85,7 +95,7 @@ export function SideNavClient() {
       if (raw) setTasks(JSON.parse(raw))
       const cur = localStorage.getItem('tasks.currentId')
       if (cur) setCurrentTaskId(cur)
-    } catch {}
+    } catch { }
   }, [])
 
   // refresh tasks on same-tab updates
@@ -94,7 +104,7 @@ export function SideNavClient() {
       try {
         const raw = localStorage.getItem('tasks.list')
         setTasks(raw ? JSON.parse(raw) : [])
-      } catch {}
+      } catch { }
     }
     window.addEventListener('tasks:updated' as any, reload as any)
     return () => window.removeEventListener('tasks:updated' as any, reload as any)
@@ -105,7 +115,7 @@ export function SideNavClient() {
     try {
       const raw = localStorage.getItem('shared.list')
       if (raw) setShared(JSON.parse(raw))
-    } catch {}
+    } catch { }
   }, [])
 
   // refresh shared on same-tab updates
@@ -114,7 +124,7 @@ export function SideNavClient() {
       try {
         const raw = localStorage.getItem('shared.list')
         setShared(raw ? JSON.parse(raw) : [])
-      } catch {}
+      } catch { }
     }
     window.addEventListener('shared:updated' as any, reload as any)
     return () => window.removeEventListener('shared:updated' as any, reload as any)
@@ -125,38 +135,38 @@ export function SideNavClient() {
     try {
       localStorage.setItem('tasks.list', JSON.stringify(next))
       window.dispatchEvent(new CustomEvent('tasks:updated'))
-    } catch {}
+    } catch { }
   }
-  
+
   function updateTask(taskId: string, patch: Partial<Task>) {
     if (!tasks.some(t => t.id === taskId)) return
     const next = tasks.map(t => (t.id === taskId ? { ...t, ...patch } : t))
     saveTasks(next)
   }
-  
+
   function deleteTask(taskId: string) {
     if (!tasks.some(t => t.id === taskId)) return
     const next = tasks.filter(t => t.id !== taskId)
     saveTasks(next)
-  
+
     if (renamingTaskId === taskId) {
       setRenamingTaskId(null)
       setRenameDraft("")
     }
-  
+
     if (currentTaskId === taskId) {
       const fallback = next[0]
       if (fallback) {
         selectTask(fallback.id)
       } else {
-        try { localStorage.removeItem('tasks.currentId') } catch {}
+        try { localStorage.removeItem('tasks.currentId') } catch { }
         setCurrentTaskId(null)
         window.dispatchEvent(new CustomEvent('tasks:select', { detail: { id: null } }))
-        router.push('/tasks')
+        router.push('/app')
       }
     }
   }
-  
+
   function nextTaskTitle(): string {
     try {
       const n = Number(localStorage.getItem('tasks.next') || '1')
@@ -177,9 +187,9 @@ export function SideNavClient() {
       localStorage.setItem('tasks.currentId', id)
       const ev = new CustomEvent('tasks:new', { detail: { id } })
       window.dispatchEvent(ev)
-    } catch {}
+    } catch { }
     // 이동: 해당 작업 세션 페이지
-    router.push(`/tasks/${id}`)
+    router.push(`/app/tasks/${id}`)
   }
 
   function selectTask(id: string) {
@@ -187,14 +197,14 @@ export function SideNavClient() {
       localStorage.setItem('tasks.currentId', id)
       const ev = new CustomEvent('tasks:select', { detail: { id } })
       window.dispatchEvent(ev)
-    } catch {}
+    } catch { }
     // 이동: 해당 작업 세션 페이지
-    router.push(`/tasks/${id}`)
+    router.push(`/app/tasks/${id}`)
   }
 
   const renderNav = (onNavigate?: () => void) => (
     <nav role="navigation" aria-label="Main" className="space-y-1">
-      {/* Dashboard first */}
+      {/* 홈 메뉴 */}
       {(() => {
         const { label, href, icon: Icon } = navItems[0]
         const isActive = pathname === href
@@ -216,12 +226,45 @@ export function SideNavClient() {
             <Link
               href={href}
               aria-current={isActive ? "page" : undefined}
-              aria-label={collapsed ? label : undefined}
-              title={collapsed ? label : undefined}
-              className={cn("flex items-center gap-2 w-full", collapsed && "justify-center")}
+              aria-label={!isExpanded ? label : undefined}
+              title={!isExpanded ? label : undefined}
+              className={cn("flex items-center gap-2 w-full", !isExpanded && "justify-center")}
             >
               <Icon className="h-4 w-4" />
-              <span className={collapsed ? "sr-only" : ""}>{t('Tasks') || label}</span>
+              <span className={cn(!isExpanded ? "sr-only" : "", "transition-opacity duration-200")}>{label}</span>
+            </Link>
+          </Button>
+        )
+      })()}
+
+      {/* Dashboard 메뉴 */}
+      {(() => {
+        const { label, href, icon: Icon } = navItems[1]
+        const isActive = pathname === href
+        return (
+          <Button
+            key={href}
+            asChild
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "w-full justify-start rounded-[var(--radius)]",
+              "focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]",
+              isActive
+                ? "font-semibold border-l-2 border-[var(--color-primary)] bg-[var(--bg-e2)] shadow-[0_0_10px_var(--color-primary)/0.12]"
+                : "text-muted-foreground hover:bg-[var(--bg-e2)]"
+            )}
+            onClick={onNavigate}
+          >
+            <Link
+              href={href}
+              aria-current={isActive ? "page" : undefined}
+              aria-label={!isExpanded ? label : undefined}
+              title={!isExpanded ? label : undefined}
+              className={cn("flex items-center gap-2 w-full", !isExpanded && "justify-center")}
+            >
+              <Icon className="h-4 w-4" />
+              <span className={cn(!isExpanded ? "sr-only" : "", "transition-opacity duration-200")}>{label}</span>
             </Link>
           </Button>
         )
@@ -239,9 +282,9 @@ export function SideNavClient() {
           )}
           onClick={() => { createNewTask(); onNavigate?.() }}
         >
-          <span className={cn("flex items-center gap-2 w-full", collapsed && "justify-center")}>
+          <span className={cn("flex items-center gap-2 w-full", !isExpanded && "justify-center")}>
             <PlusCircle className="h-4 w-4" />
-            <span className={collapsed ? "sr-only" : ""}>{t('New Task') || 'New Task'}</span>
+            <span className={cn(!isExpanded ? "sr-only" : "", "transition-opacity duration-200")}>{t('New Task') || 'New Task'}</span>
           </span>
         </Button>
         <Button
@@ -254,16 +297,16 @@ export function SideNavClient() {
           )}
           onClick={() => { setSearchOpen(true); onNavigate?.() }}
         >
-          <span className={cn("flex items-center gap-2 w-full", collapsed && "justify-center")}>
+          <span className={cn("flex items-center gap-2 w-full", !isExpanded && "justify-center")}>
             <SearchIcon className="h-4 w-4" />
-            <span className={collapsed ? "sr-only" : ""}>{t('Search') || 'Search'}</span>
+            <span className={cn(!isExpanded ? "sr-only" : "", "transition-opacity duration-200")}>{t('Search') || 'Search'}</span>
           </span>
         </Button>
       </div>
 
       {/* Tasks item */}
       {(() => {
-        const { label, href, icon: Icon } = navItems[1]
+        const { label, href, icon: Icon } = navItems[2]
         const isActive = pathname?.startsWith(href)
         return (
           <Button
@@ -283,12 +326,12 @@ export function SideNavClient() {
             <Link
               href={href}
               aria-current={isActive ? "page" : undefined}
-              aria-label={collapsed ? label : undefined}
-              title={collapsed ? label : undefined}
-              className={cn("flex items-center gap-2 w-full", collapsed && "justify-center")}
+              aria-label={!isExpanded ? label : undefined}
+              title={!isExpanded ? label : undefined}
+              className={cn("flex items-center gap-2 w-full", !isExpanded && "justify-center")}
             >
               <Icon className="h-4 w-4" />
-              <span className={collapsed ? "sr-only" : ""}>{label}</span>
+              <span className={cn(!isExpanded ? "sr-only" : "", "transition-opacity duration-200")}>{label}</span>
             </Link>
           </Button>
         )
@@ -301,7 +344,7 @@ export function SideNavClient() {
             <div className="px-3 text-xs text-muted-foreground">{t('작업이 없습니다') || '작업이 없습니다'}</div>
           )}
           {tasks.map(task => {
-            const active = currentTaskId === task.id || pathname === `/tasks/${task.id}`
+            const active = pathname === `/app/tasks/${task.id}`
             const isRenaming = renamingTaskId === task.id
 
             const commitRename = () => {
@@ -355,7 +398,7 @@ export function SideNavClient() {
                       onClick={(e) => e.stopPropagation()}
                     />
                   ) : (
-                    <span className={collapsed ? "sr-only" : "truncate"}>{task.title}</span>
+                    <span className={cn(!isExpanded ? "sr-only" : "truncate", "transition-opacity duration-200")}>{task.title}</span>
                   )}
                 </button>
                 <DropdownMenu>
@@ -399,7 +442,7 @@ export function SideNavClient() {
 
       {/* Shared Charts item */}
       {(() => {
-        const { label, href, icon: Icon } = navItems[2]
+        const { label, href, icon: Icon } = navItems[3]
         const isActive = pathname?.startsWith(href) || pathname?.startsWith('/s/')
         return (
           <Button
@@ -419,12 +462,12 @@ export function SideNavClient() {
             <Link
               href={href}
               aria-current={isActive ? "page" : undefined}
-              aria-label={collapsed ? label : undefined}
-              title={collapsed ? label : undefined}
-              className={cn("flex items-center gap-2 w-full", collapsed && "justify-center")}
+              aria-label={!isExpanded ? label : undefined}
+              title={!isExpanded ? label : undefined}
+              className={cn("flex items-center gap-2 w-full", !isExpanded && "justify-center")}
             >
               <Icon className="h-4 w-4" />
-              <span className={collapsed ? "sr-only" : ""}>{label}</span>
+              <span className={cn(!isExpanded ? "sr-only" : "", "transition-opacity duration-200")}>{label}</span>
             </Link>
           </Button>
         )
@@ -473,7 +516,7 @@ export function SideNavClient() {
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
-                  <span className="truncate">{s.title || s.id}</span>
+                  <span className={cn("truncate", !isExpanded && "sr-only", "transition-opacity duration-200")}>{s.title || s.id}</span>
                 )}
               </a>
               <DropdownMenu>
@@ -520,76 +563,87 @@ export function SideNavClient() {
     </nav>
   )
 
+  const effectiveWidth = collapsed && !isHovered ? 64 : (collapsed && isHovered ? 256 : sidebarWidth)
+  const isExpanded = !collapsed || (collapsed && isHovered)
+
   return (
-    <div className={cn("flex h-full flex-col transition-[width] duration-200 ease-[var(--easing)]", collapsed ? "w-16" : "w-64")}> 
-      {/* Top: Logo */}
-      <div className="h-16 flex items-center px-2 md:px-4 border-b">
-        <span className={cn("text-lg font-semibold text-foreground", collapsed && "sr-only")}>Diagrammer</span>
-        {/* Desktop collapse toggle */}
-        <div className="ml-auto hidden md:block">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
-            title={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
-            onClick={() => setCollapsed(v => !v)}
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
-        </div>
-        {/* Mobile menu button */}
-        <div className="ml-2 md:hidden">
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="메뉴 열기">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left">
-              <div className="flex h-full flex-col">
-                <div className="mb-4 text-base font-semibold">메뉴</div>
-                {renderNav(() => setOpen(false))}
-                <div className="mt-auto pt-4 border-t">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-start">
-                        <Avatar className="h-6 w-6 mr-2">
-                          <AvatarFallback>G</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">guest</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start" forceMount>
-                      <DropdownMenuItem asChild>
-                        <Link href="/profile">프로필</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/settings">설정</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>로그아웃</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
+    <div
+      className="flex h-full flex-col relative transition-all duration-200 ease-in-out"
+      style={{ width: `${effectiveWidth}px` }}
+      onMouseEnter={(e) => {
+        // 토글 핸들 영역이 아닌 경우에만 호버 처리
+        if (collapsed && !e.currentTarget.querySelector('.toggle-handle')?.contains(e.target as Node)) {
+          setIsHovered(true)
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (collapsed) {
+          setIsHovered(false)
+        }
+      }}
+    >
+      {/* Resize Handle */}
+      <div
+        className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors z-10"
+        onMouseDown={(e) => {
+          e.preventDefault()
+          const startX = e.clientX
+          const startWidth = sidebarWidth
+
+          const handleMouseMove = (e: MouseEvent) => {
+            const newWidth = Math.max(200, Math.min(400, startWidth + (e.clientX - startX)))
+            setSidebarWidth(newWidth)
+          }
+
+          const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove)
+            document.removeEventListener('mouseup', handleMouseUp)
+          }
+
+          document.addEventListener('mousemove', handleMouseMove)
+          document.addEventListener('mouseup', handleMouseUp)
+        }}
+      />
+
+      {/* Toggle Handle */}
+      <div
+        className="toggle-handle absolute top-4 -right-8 w-8 h-8 flex items-center justify-center bg-background border border-border rounded-r-md shadow-sm cursor-pointer hover:bg-accent transition-colors z-20"
+        onMouseEnter={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+        }}
+        onMouseLeave={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+        }}
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0"
+          onClick={(e) => {
+            e.stopPropagation()
+            setCollapsed(!collapsed)
+          }}
+        >
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
       </div>
 
       {/* Middle: Nav */}
-      <div className={cn("flex-1 overflow-auto px-3 py-4", collapsed && "px-2")}> 
+      <div className={cn("flex-1 overflow-auto px-3 py-2", !isExpanded && "px-2")}>
         {renderNav()}
       </div>
 
       {/* Bottom: Profile */}
-      <div className="p-4 border-t">
+      <div className="p-2 border-t">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className={cn("w-full justify-start", collapsed && "justify-center")}> 
-              <Avatar className={cn("h-6 w-6", collapsed ? "" : "mr-2")}> 
+            <Button variant="ghost" className={cn("w-full justify-start", !isExpanded && "justify-center")}>
+              <Avatar className={cn("h-6 w-6", !isExpanded ? "" : "mr-2")}>
                 <AvatarFallback>G</AvatarFallback>
               </Avatar>
-              <span className={cn("text-sm", collapsed && "sr-only")}>guest</span>
+              <span className={cn("text-sm", !isExpanded && "sr-only", "transition-opacity duration-200")}>guest</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="start" forceMount>

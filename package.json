@@ -5,7 +5,7 @@
   "description": "AI 기반 다이어그램 생성 및 편집 플랫폼",
   "scripts": {
     "dev:web": "cd apps/web && npm run dev",
-    "dev:api": "cd apps/api && python main.py --reload",
+    "dev:api": "cd apps/api && uv run python main.py",
     "dev": "echo '🚀 Diagrammer 개발 서버 시작:' && echo '' && echo '📱 웹 프론트엔드 (새 터미널에서):' && echo '   npm run dev:web' && echo '' && echo '🔧 API 백엔드 (새 터미널에서):' && echo '   npm run dev:api' && echo '' && echo '📚 API 문서: http://localhost:8000/docs' && echo '🌐 웹 프론트: http://localhost:3000'",
     "build": "cd apps/web && npm run build",
     "start": "cd apps/web && npm run start",
@@ -13,11 +13,15 @@
     "type-check": "cd apps/web && npm run type-check",
     "test": "cd apps/web && npm run test",
     "install:web": "cd apps/web && npm install",
-    "install:api": "cd apps/api && pip install -r requirements.txt",
+    "install:api": "cd apps/api && uv sync",
     "install:all": "npm run install:web && npm run install:api",
     "clean:web": "cd apps/web && rm -rf node_modules && rm -rf .next",
-    "clean:api": "cd apps/api && rm -rf __pycache__ && rm -rf *.pyc",
-    "clean:all": "npm run clean:web && npm run clean:api"
+    "clean:api": "cd apps/api && rm -rf __pycache__ && rm -rf *.pyc && rm -rf .venv",
+    "clean:all": "npm run clean:web && npm run clean:api",
+    "db:setup": "./scripts/setup-db.sh",
+    "db:start": "docker-compose up -d",
+    "db:stop": "docker-compose down",
+    "db:reset": "docker-compose down -v && docker-compose up -d"
   },
   "keywords": [
     "diagram",

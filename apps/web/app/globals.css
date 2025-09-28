@@ -7,6 +7,7 @@
   * {
     border-color: var(--color-border);
   }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -18,6 +19,7 @@
     transform: translateX(20%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0%);
     opacity: 1;
@@ -35,7 +37,8 @@
   border-radius: var(--radius);
   box-shadow: 0 14px 32px -20px rgba(17, 24, 39, 0.55);
   transition: transform var(--dur-2) var(--easing), filter var(--dur-2) var(--easing), box-shadow var(--dur-3) var(--easing);
-  min-width: 80px; /* 버튼 최소 너비 지정으로 크기 통일 */
+  min-width: 80px;
+  /* 버튼 최소 너비 지정으로 크기 통일 */
   display: inline-flex;
   justify-content: center;
   align-items: center;
@@ -88,7 +91,20 @@
 
 .canvas-action-btn--copy:active:not(:disabled) {
   transform: translateY(1px);
-  filter: saturate(0.95) brightness(0.95);
+}
+
+.canvas-action-btn--code {
+  --btn-bg: #3b82f6;
+  --btn-fg: #ffffff;
+  background: var(--btn-bg) !important;
+  color: var(--btn-fg) !important;
+}
+
+.canvas-action-btn--share {
+  --btn-bg: #8b5cf6;
+  --btn-fg: #ffffff;
+  background: var(--btn-bg) !important;
+  color: var(--btn-fg) !important;
 }
 
 .canvas-action-ripple {
@@ -98,7 +114,8 @@
   transform: scale(0);
   opacity: 0.35;
   animation: ripple-burst 520ms var(--easing) forwards;
-  z-index: 1; /* 리플 효과가 버튼 내용 위에 표시되도록 */
+  z-index: 1;
+  /* 리플 효과가 버튼 내용 위에 표시되도록 */
 }
 
 @keyframes ripple-burst {
@@ -106,10 +123,12 @@
     transform: scale(0);
     opacity: 0.35;
   }
+
   60% {
     transform: scale(1.2);
     opacity: 0.2;
   }
+
   100% {
     transform: scale(1.6);
     opacity: 0;

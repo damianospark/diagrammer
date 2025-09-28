@@ -43,7 +43,7 @@ export default function Workspace() {
   // toast와 i18n 훅 사용
   const { toast } = useToast()
   const { t } = useI18n()
-  
+
   // 참조 변수
   const containerRef = useRef<HTMLDivElement>(null)
   const draggingHRef = useRef(false)
@@ -56,7 +56,7 @@ export default function Workspace() {
   // 중복 요청 방지용 즉시 락 및 요청 취소 컨트롤러
   const sendingRef = useRef<boolean>(false)
   const generateAbortRef = useRef<AbortController | null>(null)
-  
+
   // 상태 변수
   const [openRevisionByRoot, setOpenRevisionByRoot] = useState<Record<string, string>>({})
   const [openRootId, setOpenRootId] = useState<string | null>(null)
@@ -116,7 +116,7 @@ export default function Workspace() {
         const parsedM = JSON.parse(rawM)
         if (Array.isArray(parsedM)) setMessages(parsedM)
       }
-    } catch {}
+    } catch { }
   }, [])
   // 변경 시 지속화
   useEffect(() => {
@@ -125,7 +125,7 @@ export default function Workspace() {
       if (currentTaskId) {
         localStorage.setItem(`workspace.versions.${currentTaskId}`, JSON.stringify(versions))
       }
-    } catch {}
+    } catch { }
   }, [versions, currentTaskId])
   useEffect(() => {
     try {
@@ -133,7 +133,7 @@ export default function Workspace() {
       if (currentTaskId) {
         localStorage.setItem(`workspace.messages.${currentTaskId}`, JSON.stringify(messages))
       }
-    } catch {}
+    } catch { }
   }, [messages, currentTaskId])
 
   // 공유 인덱스 로딩 및 동기화 (shared.list → versionId 매핑)
@@ -150,7 +150,7 @@ export default function Workspace() {
         })
         setSharedByVersion(byVersion)
         setSharedByRoot(byRoot)
-      } catch {}
+      } catch { }
     }
     reloadShared()
     const handler = () => reloadShared()
@@ -199,7 +199,7 @@ export default function Workspace() {
       if (sendingRef.current) return
       sendingRef.current = true
       setSending(true)
-      try { generateAbortRef.current?.abort() } catch {}
+      try { generateAbortRef.current?.abort() } catch { }
       const controller = new AbortController()
       generateAbortRef.current = controller
       const response = await fetch("/api/v1/generate", {
@@ -258,7 +258,7 @@ export default function Workspace() {
       setMessageDraft("")
     }
   }, [messageDraft, engine, provider, messages])
-  
+
   // 코드펜스 제거 유틸 (표시는 칩으로 대체함) - 전역 스코프
   function stripCodeFenceLocal(input: string): string {
     return String(input || '')
@@ -266,7 +266,7 @@ export default function Workspace() {
       .replace(/```\s*$/m, '')
       .trim()
   }
-  
+
   // 코드 내용에서 엔진 자동 판별 (전역 스코프)
   function detectEngineFromCode(input: string): 'mermaid' | 'visjs' {
     const raw = String(input || '')
@@ -293,7 +293,7 @@ export default function Workspace() {
     "데이터베이스 ER 다이어그램",
     "웹 서비스 아키텍처 만들어줘"
   ];
-  
+
   // 비코드 메시지에 포함된 마크다운 코드펜스를 탐지해 칩(언어) + 코드 본문만 렌더링
   function renderMessageContent(text?: string) {
     const raw = text || ''
@@ -314,7 +314,7 @@ export default function Workspace() {
       </div>
     )
   }
-  
+
   // 선택된 버전 계산
   const selectedVersion = useMemo(() => {
     if (!selectedVersionId) return null
@@ -415,7 +415,7 @@ export default function Workspace() {
 
   // persist split setting
   useEffect(() => {
-    try { localStorage.setItem('workspace.splitPct', String(splitPct)) } catch {}
+    try { localStorage.setItem('workspace.splitPct', String(splitPct)) } catch { }
   }, [splitPct])
 
   // sync split from external settings page via storage event
@@ -453,9 +453,9 @@ export default function Workspace() {
         try {
           localStorage.setItem(`workspace.versions.${taskId}`, JSON.stringify(vers))
           localStorage.setItem(`workspace.messages.${taskId}`, JSON.stringify(msgs))
-        } catch {}
+        } catch { }
       }
-    } catch {}
+    } catch { }
   }
 
   function loadTask(taskId: string) {
@@ -489,7 +489,7 @@ export default function Workspace() {
             return
           }
         }
-      } catch {}
+      } catch { }
       setTaskTitle(String(task.title || ""))
       const newMsgs: ChatMessage[] = []
       const newVers: CodeVersion[] = []
@@ -518,7 +518,7 @@ export default function Workspace() {
       setMessages(newMsgs)
       setSelectedVersionId(newVers.length ? newVers[newVers.length - 1].id : null)
       setSelectedMessageId(newMsgs.length ? newMsgs[newMsgs.length - 1].id : null)
-    } catch {}
+    } catch { }
   }
 
   // React to tasks events
@@ -532,14 +532,14 @@ export default function Workspace() {
         setSelectedMessageId(null)
         setSelectedVersionId(null)
         renderStatusRef.current = {}
-      } catch {}
+      } catch { }
     }
     function onSelect(e: Event) {
       try {
         const id = (e as CustomEvent).detail?.id as string
         setCurrentTaskId(id)
         loadTask(id)
-      } catch {}
+      } catch { }
     }
     window.addEventListener('tasks:new' as any, onNew as any)
     window.addEventListener('tasks:select' as any, onSelect as any)
@@ -564,7 +564,7 @@ export default function Workspace() {
         const list = raw ? JSON.parse(raw) : []
         const task = list.find((x: any) => x.id === currentTaskId)
         if (task) setTaskTitle(String(task.title || ""))
-      } catch {}
+      } catch { }
     }
     window.addEventListener('tasks:updated' as any, reload as any)
     return () => window.removeEventListener('tasks:updated' as any, reload as any)
@@ -594,7 +594,7 @@ export default function Workspace() {
       if (!isNaN(v)) setSplitPct(Math.max(20, Math.min(80, v)))
       const tid = localStorage.getItem('tasks.currentId')
       if (tid) { setCurrentTaskId(tid); loadTask(tid) }
-    } catch {}
+    } catch { }
   }, [])
 
   // sync split via custom event for same-tab updates
@@ -604,7 +604,7 @@ export default function Workspace() {
         const ce = e as CustomEvent
         const v = Number(ce.detail)
         if (!isNaN(v)) setSplitPct(Math.max(20, Math.min(80, v)))
-      } catch {}
+      } catch { }
     }
     window.addEventListener('workspace:splitPct' as any, handler as any)
     return () => window.removeEventListener('workspace:splitPct' as any, handler as any)
@@ -636,19 +636,19 @@ export default function Workspace() {
     if (sendingRef.current) return
     sendingRef.current = true
     setSending(true)
-    
+
     // 입력 필드 초기화 - setTimeout을 사용해 비동기로 처리
     setTimeout(() => {
       setInput("")
     }, 0)
-    
+
     const userMsgId = uid()
     const userMsg: ChatMessage = { id: userMsgId, role: "user", kind: "text", text: prompt }
     setMessages((prev) => [...prev.filter(m => m.id !== userMsgId), userMsg])
 
     try {
       // 이전 요청이 있으면 취소
-      try { generateAbortRef.current?.abort() } catch {}
+      try { generateAbortRef.current?.abort() } catch { }
       const controller = new AbortController()
       generateAbortRef.current = controller
       const response = await fetch("/api/v1/generate", {
@@ -718,30 +718,30 @@ export default function Workspace() {
     const button = event.currentTarget
     const existingRipples = button.querySelectorAll('.canvas-action-ripple')
     existingRipples.forEach(ripple => ripple.remove())
-    
+
     // 새 리플 요소 생성
     const rect = button.getBoundingClientRect()
     const size = Math.max(rect.width, rect.height) * 1.5 // 더 크게 만들어 리플이 버튼을 충분히 덮도록 함
     const ripple = document.createElement('span')
     ripple.className = 'canvas-action-ripple'
-    
+
     // 클릭 위치 계산 (클릭이 없으면 가운데에 배치)
     const x = event.clientX ? event.clientX - rect.left : rect.width / 2
     const y = event.clientY ? event.clientY - rect.top : rect.height / 2
-    
+
     // 리플 요소 스타일 설정
     ripple.style.width = `${size}px`
     ripple.style.height = `${size}px`
     ripple.style.left = `${x - size / 2}px`
     ripple.style.top = `${y - size / 2}px`
-    
+
     // 색상 설정
     const rippleColor = button.getAttribute('data-ripple-color') || 'rgba(255,255,255,0.4)'
     ripple.style.background = rippleColor
-    
+
     // 버튼에 리플 요소 추가
     button.appendChild(ripple)
-    
+
     // 애니메이션 완료 후 자동 제거
     ripple.addEventListener('animationend', () => ripple.remove())
   }, [])
@@ -853,7 +853,7 @@ export default function Workspace() {
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') {
         e.preventDefault()
-        ;(document.getElementById('prompt-input') as HTMLTextAreaElement | null)?.focus()
+          ; (document.getElementById('prompt-input') as HTMLTextAreaElement | null)?.focus()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -981,7 +981,7 @@ export default function Workspace() {
       if (!rid) return 1
       const related = versions
         .filter(v => (v.rootId || v.id) === rid && v.status === 'applied')
-        .sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
       const idx = related.findIndex(v => v.id === selectedVersionId)
       return (idx >= 0 ? idx : related.length - 1) + 1
     } catch { return 1 }
@@ -1018,7 +1018,7 @@ export default function Workspace() {
         list.unshift({ id, pin, title: titleForShare, url: fullUrl, createdAt: data.created_at || new Date().toISOString(), versionId: v.id, rootId: v.rootId || v.id })
         localStorage.setItem('shared.list', JSON.stringify(list))
         window.dispatchEvent(new CustomEvent('shared:updated'))
-      } catch {}
+      } catch { }
       // 공유 정보 저장 (팝오버에 표시용)
       setShareInfo({ id, pin, url: fullUrl, title: titleForShare })
       toast({ title: "공유됨", description: "공유 정보가 준비되었습니다." })
@@ -1093,11 +1093,10 @@ export default function Workspace() {
                           tabIndex={0}
                           onClick={() => { setSelectedMessageId(m.id) }}
                           onKeyDown={(e) => { if (e.key === 'Enter') setSelectedMessageId(m.id) }}
-                          className={`group relative overflow-visible w-full rounded-md border p-3 outline-none transition-colors ${
-                            m.role === 'user' 
-                              ? 'bg-[var(--color-amber)]/10 hover:bg-[var(--color-amber)]/15' 
+                          className={`group relative overflow-visible w-full rounded-md border p-3 outline-none transition-colors ${m.role === 'user'
+                              ? 'bg-[var(--color-amber)]/10 hover:bg-[var(--color-amber)]/15'
                               : 'bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/15'
-                          } ${selectedMessageId === m.id ? 'ring-2 ring-ring' : ''}`}
+                            } ${selectedMessageId === m.id ? 'ring-2 ring-ring' : ''}`}
                           style={{ borderColor: 'var(--color-border)', width: bubbleWidth, maxWidth: '720px' }}
                         >
                           {m.kind === 'error' ? (
@@ -1331,8 +1330,8 @@ export default function Workspace() {
                   }
                 }}
               />
-              <Button 
-                disabled={sending || !input.trim()} 
+              <Button
+                disabled={sending || !input.trim()}
                 onClick={() => {
                   const trimmedInput = input.trim()
                   if (trimmedInput && !sending && !sendingRef.current) {
@@ -1367,7 +1366,7 @@ export default function Workspace() {
                   aria-label="PNG로 저장"
                   size="sm"
                   variant="outline"
-                  disabled={downloading.png}
+                  disabled={downloading.png || !selectedVersion}
                   onClick={(event) => {
                     triggerRipple(event)
                     void exportPNG()
@@ -1385,7 +1384,7 @@ export default function Workspace() {
                   aria-label="SVG로 저장"
                   size="sm"
                   variant="outline"
-                  disabled={downloading.svg}
+                  disabled={downloading.svg || !selectedVersion}
                   onClick={(event) => {
                     triggerRipple(event)
                     void exportSVG()
@@ -1403,7 +1402,7 @@ export default function Workspace() {
                   aria-label="이미지 복사"
                   size="sm"
                   variant="outline"
-                  disabled={downloading.copy}
+                  disabled={downloading.copy || !selectedVersion}
                   onClick={(event) => {
                     triggerRipple(event)
                     void exportCopyImage()
@@ -1416,34 +1415,49 @@ export default function Workspace() {
                 >
                   {downloading.copy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Copy className="mr-1 h-4 w-4" />} 복사
                 </Button>
-                <Button title="코드 파일 저장" aria-label="코드 파일 저장" size="sm" variant="outline" onClick={() => selectedVersionId && exportCode(selectedVersionId)}>
+                <Button
+                  title="코드 파일 저장"
+                  aria-label="코드 파일 저장"
+                  size="sm"
+                  variant="outline"
+                  disabled={!selectedVersion}
+                  onClick={() => selectedVersionId && exportCode(selectedVersionId)}
+                  className="canvas-action-btn canvas-action-btn--code"
+                >
                   <FileCode2 className="h-4 w-4 mr-1" /> 코드
                 </Button>
                 <Popover open={!!shareInfo}>
                   <PopoverTrigger asChild>
-                    <Button title="공유하기" aria-label="공유하기" size="sm" variant="default" onClick={() => {
-                      // 현재 선택 상태 확인
-                      const v = selectedVersion
-                      const rootId = v?.rootId || v?.id || null
-                      const existing = (v && sharedByVersion[v.id]) || (rootId ? sharedByRoot[rootId] : null)
+                    <Button
+                      title="공유하기"
+                      aria-label="공유하기"
+                      size="sm"
+                      variant="default"
+                      disabled={!selectedVersion}
+                      className="canvas-action-btn canvas-action-btn--share"
+                      onClick={() => {
+                        // 현재 선택 상태 확인
+                        const v = selectedVersion
+                        const rootId = v?.rootId || v?.id || null
+                        const existing = (v && sharedByVersion[v.id]) || (rootId ? sharedByRoot[rootId] : null)
 
-                      if (existing) {
-                        // 이미 공유된 경우: 확인 팝오버 오픈
-                        setExistingShared(existing)
-                        setShareTitleDraft(existing.title || '')
-                        setShareInfo({ id: '', pin: '', url: '', title: existing.title })
-                        setShareMode('conflict')
-                        return
-                      }
+                        if (existing) {
+                          // 이미 공유된 경우: 확인 팝오버 오픈
+                          setExistingShared(existing)
+                          setShareTitleDraft(existing.title || '')
+                          setShareInfo({ id: '', pin: '', url: '', title: existing.title })
+                          setShareMode('conflict')
+                          return
+                        }
 
-                      // 신규 공유: 제목 입력 폼 오픈
-                      const ordinal = getChartOrdinalWithinTask()
-                      const defaultTitle = `${taskTitle || '새작업'}의 ${ordinal}번째 차트`
-                      setExistingShared(null)
-                      setShareTitleDraft(defaultTitle)
-                      setShareInfo({ id: '', pin: '', url: '', title: defaultTitle })
-                      setShareMode('form')
-                    }}>
+                        // 신규 공유: 제목 입력 폼 오픈
+                        const ordinal = getChartOrdinalWithinTask()
+                        const defaultTitle = `${taskTitle || '새작업'}의 ${ordinal}번째 차트`
+                        setExistingShared(null)
+                        setShareTitleDraft(defaultTitle)
+                        setShareInfo({ id: '', pin: '', url: '', title: defaultTitle })
+                        setShareMode('form')
+                      }}>
                       <Share2 className="h-4 w-4 mr-1" /> 공유
                     </Button>
                   </PopoverTrigger>
@@ -1468,7 +1482,7 @@ export default function Workspace() {
                                   localStorage.setItem('shared.list', JSON.stringify(next))
                                   window.dispatchEvent(new CustomEvent('shared:updated'))
                                   toast({ title: '공유삭제', description: '공유 항목이 목록에서 제거되었습니다.' })
-                                } catch {}
+                                } catch { }
                                 setExistingShared(null)
                                 setShareMode(null)
                                 setShareInfo(null)

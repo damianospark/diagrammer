@@ -8,11 +8,27 @@
 * **유료 회원**: 무제한 세션/검색/공유(뷰), Google Slides Export
 * **관리자(Admin)**: 회원/세션/결제/콘텐츠/캐시/SEO/보안 관리 (FastAPI Admin)
 
+**백엔드 아키텍처**
+* **FastAPI 서버**: RESTful API, JWT 인증, 역할 기반 접근 제어
+* **JSON 파일 DB**: 방문자/다이어그램/익스포트/공유 링크 관리
+* **LLM 어댑터**: Mock/Gemini API 지원, Mermaid/vis.js 코드 생성
+* **익스포트 서비스**: PNG/SVG/PPTX 지원, 파일 다운로드
+* **Stripe 결제**: 체크아웃, 포털, 웹훅 처리
+* **관리자 API**: 대시보드, 사용자/콘텐츠 관리, 시스템 로그
+
 렌더링/편집 엔진 규칙
 
 * **Mermaid.js**: 플로우/시퀀스/단순 구조(<100 노드)
 * **vis.js**: 네트워크/계층/대규모(>100), 500+ 노드 성능 안전장치
 * **회원 편집**: Mermaid/vis.js → **React Flow 객체** 변환 후 편집
+
+**SaaS 사이트 구조**
+* **랜딩 페이지**: Hero, 기능 소개, 데모, CTA
+* **요금제 페이지**: 플랜 비교, FAQ, Stripe Checkout
+* **로그인**: OAuth 전용 (Google, Facebook, GitHub, Kakao, Naver)
+* **메인 앱**: 다이어그램 생성/편집 도구
+* **설정**: 프로필, 보안, 청구정보
+* **관리자**: 사용자/콘텐츠/시스템 관리
 
 ---
 
@@ -45,6 +61,164 @@
 ### 접근성/UX
 - 삭제 확인 팝오버에 명확한 포커스/호버 유지, 키보드 내비 지원(버튼 focusable)
 - 코드 리비전 적용 시 즉시 캔버스 반영 및 토스트 안내
+
+## 12b) SaaS 사이트 및 UI/UX 개선(2025-01-15)
+
+### 변경 요약
+- SaaS 마케팅 사이트 구축 및 기존 앱과 통합
+- 헤더 네비게이션 및 사이드바 UX 개선
+- 캔버스 액션 버튼 스타일 통일 및 조건부 활성화
+
+### 상세 내용
+- SaaS 사이트 구조
+  - `/`: 랜딩 페이지 (Hero, 기능, 데모, 고객 로고, CTA)
+  - `/pricing`: 요금제/기능 비교/FAQ, Checkout 버튼
+  - `/login`: OAuth 전용 로그인 (이메일 인증 없음)
+  - `/app`: 메인 애플리케이션 (기존 다이어그램 생성 도구)
+  - `/settings`: 프로필, 보안, 청구정보
+  - `/admin`: 관리자 패널 (shadcn/ui 기반)
+- 인증 시스템
+  - FastAPI 백엔드 기반 JWT 인증
+  - OAuth 제공자: Google, Facebook, GitHub, Kakao, Naver
+  - 이메일 인증 제거, OAuth 전용
+- 결제/구독 시스템
+  - Stripe Checkout 세션 생성
+  - Webhook 처리: checkout.session.completed, customer.subscription.updated
+  - BillingProfile과 User 동기화
+  - 플랜별 엔타이틀 관리
+- UI/UX 개선
+  - 글로벌 헤더: 테마/언어 토글, 사용자 메뉴 통합
+  - 사이드바: 토글 핸들 외곽 이동, 호버 확장, 폭 조절 기능
+  - 캔버스 헤더: 액션 버튼 스타일 통일, 차트 존재 시에만 활성화
+  - 반응형 디자인 및 접근성 개선
+
+### 파일
+- SaaS 사이트: `apps/web/app/` (홈, 요금제, 로그인, 설정, 관리자)
+- 글로벌 헤더: `apps/web/components/GlobalHeader.tsx`
+- 사이드바: `apps/web/components/side-nav/SideNavClient.tsx`
+- 워크스페이스: `apps/web/components/workspace/Workspace.tsx`
+- CSS 스타일: `apps/web/app/globals.css`
+
+### 접근성/UX
+- 헤더 메뉴 활성 상태 표시 (파란색 텍스트 + 하단 보더)
+- 사이드바 호버 시 자동 확장 및 텍스트 표시
+- 캔버스 버튼 색상 체계 통일 (PNG: 코랄, SVG: 앰버, 복사: 라임, 코드: 파랑, 공유: 보라)
+- 키보드 네비게이션 및 스크린 리더 지원
+
+## 12c) 백엔드 FastAPI 시스템 구축(2025-01-15)
+
+### 변경 요약
+- FastAPI 기반 백엔드 서버 구축
+- JSON 파일 기반 데이터베이스 시스템
+- JWT 인증 및 역할 기반 접근 제어
+- LLM 어댑터 시스템 (Mock/Gemini)
+- 익스포트 서비스 (PNG/SVG/PPTX)
+- Stripe 결제 시스템 통합
+- 관리자 패널 API
+
+### 상세 내용
+- **FastAPI 서버 구조**
+  - `apps/api/main.py`: 메인 애플리케이션 및 CORS 설정
+  - `apps/api/routes.py`: 코어 API 엔드포인트
+  - `apps/api/auth_routes.py`: 인증 관련 API
+  - `apps/api/stripe_routes.py`: Stripe 결제 API
+  - `apps/api/admin_routes.py`: 관리자 패널 API
+- **인증 시스템**
+  - JWT 기반 인증 (30일 토큰)
+  - 테스트 모드 사용자: user@test.com, pro@test.com, admin@test.com, owner@test.com
+  - 역할 기반 접근 제어: USER, ADMIN, OWNER
+  - 인증 미들웨어 및 의존성 주입
+- **JSON 파일 데이터베이스**
+  - `visitors.json`: 방문자 관리
+  - `diagrams.json`: 다이어그램 저장/조회
+  - `exports.json`: 익스포트 기록
+  - `shares.json`: 공유 링크 관리
+  - 파일 락킹 및 TTL 스위퍼 (1시간마다 만료 데이터 정리)
+- **LLM 어댑터 시스템**
+  - Mock LLM 어댑터 (개발용)
+  - Gemini API 어댑터 (실제 LLM)
+  - Mermaid/vis.js 코드 생성
+  - 에러 처리 및 폴백 메커니즘
+- **익스포트 서비스**
+  - PNG/SVG 익스포트 (클라이언트 사이드 처리)
+  - PPTX 익스포트 (서버 사이드, python-pptx)
+  - Google Slides 익스포트 (스텁)
+  - 파일 다운로드 API
+- **Stripe 결제 시스템**
+  - 체크아웃 세션 생성
+  - 고객 포털 세션
+  - 웹훅 처리: checkout.session.completed, subscription.updated/deleted
+  - 구독 상태 관리
+- **관리자 패널 API**
+  - 대시보드 통계 (사용자/다이어그램/익스포트/수익)
+  - 사용자 관리 (조회, 수정)
+  - 다이어그램 관리 (조회, 삭제)
+  - 익스포트 관리
+  - 시스템 로그 (OWNER 전용)
+  - 시스템 정리 작업 (OWNER 전용)
+- **공유 시스템**
+  - PIN 기반 보안 공유 (5자리 영숫자)
+  - 공유 링크 생성/조회
+  - PIN 검증 및 코드 반환
+
+### API 엔드포인트
+- **인증** (`/api/auth`): 로그인, 사용자 정보, 토큰 검증
+- **코어** (`/api/v1`): 다이어그램 생성/조회, 익스포트, 공유
+- **Stripe** (`/api/stripe`): 체크아웃, 포털, 웹훅
+- **관리자** (`/api/admin`): 대시보드, 사용자/콘텐츠 관리, 시스템 로그
+
+### 파일
+- 백엔드 서버: `apps/api/`
+- 데이터베이스: `apps/api/database.py`
+- 인증: `apps/api/auth.py`
+- LLM 어댑터: `apps/api/llm_adapter.py`
+- 익스포트 서비스: `apps/api/export_service.py`
+- Stripe 서비스: `apps/api/stripe_service.py`
+
+### 보안/운영
+- JWT 토큰 기반 인증
+- 역할 기반 접근 제어 (USER/ADMIN/OWNER)
+- CORS 설정 및 보안 헤더
+- 구조적 로깅 및 에러 핸들링
+- TTL 기반 데이터 정리
+- 파일 락킹으로 동시 접근 제어
+
+## 12d) 테스트 모드 및 개발 환경(2025-01-15)
+
+### 변경 요약
+- 개발 및 테스트를 위한 테스트 모드 사용자 시스템
+- FastAPI 백엔드와 Next.js 프론트엔드 연동
+- 환경변수 기반 설정 관리
+
+### 상세 내용
+- **테스트 모드 사용자**
+  - `user@test.com`: 일반 사용자 (free 플랜)
+  - `pro@test.com`: Pro 사용자 (pro 플랜)
+  - `admin@test.com`: 관리자 (ADMIN 역할)
+  - `owner@test.com`: 소유자 (OWNER 역할)
+- **개발 환경 설정**
+  - FastAPI 서버: `http://localhost:8000`
+  - Next.js 프론트엔드: `http://localhost:3000`
+  - CORS 설정으로 로컬 개발 지원
+- **환경변수 관리**
+  - `.env.local`: 프론트엔드 환경변수
+  - `.env`: 백엔드 환경변수
+  - API 키, 데이터베이스 URL, Stripe 설정 등
+- **개발 도구**
+  - FastAPI 자동 문서화 (`/docs`)
+  - 구조적 로깅 및 에러 핸들링
+  - 파일 기반 데이터베이스로 빠른 개발/테스트
+
+### 파일
+- 환경설정: `apps/web/.env.local`, `apps/api/.env`
+- 테스트 사용자: `apps/api/auth.py` (TEST_USERS)
+- 개발 서버: `apps/api/main.py`, `apps/web/package.json`
+
+### 개발 워크플로우
+1. 백엔드 서버 시작: `cd apps/api && python3 -m uvicorn main:app --reload`
+2. 프론트엔드 서버 시작: `cd apps/web && npm run dev`
+3. 테스트 사용자로 로그인하여 기능 테스트
+4. API 문서 확인: `http://localhost:8000/docs`
 
 ## 9) 프론트엔드 UX 업데이트(2025-09-26)
 

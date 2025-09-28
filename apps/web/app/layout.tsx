@@ -1,8 +1,7 @@
-import { Header } from '@/components/header'
-import { SideNav } from '@/components/side-nav/SideNav'
 import { I18nProvider } from '@/hooks/i18n'
 import { ThemeProvider } from '@/hooks/theme'
 import { ToastProvider } from '@/hooks/use-toast'
+import { GlobalHeader } from '@/components/GlobalHeader'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -25,15 +24,8 @@ export default function RootLayout({
         <ThemeProvider>
           <I18nProvider>
             <ToastProvider>
-              <div className="flex h-screen bg-background">
-                <SideNav />
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <Header />
-                  <main className="flex-1 overflow-auto">
-                    {children}
-                  </main>
-                </div>
-              </div>
+              <GlobalHeader />
+              {children}
             </ToastProvider>
           </I18nProvider>
         </ThemeProvider>

@@ -10,16 +10,8 @@ export function Header() {
   const { theme, toggleTheme } = useTheme()
 
   return (
-    <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center justify-between h-full px-6">
-        <div className="flex items-center space-x-4">
-          {/* Mobile menu button space */}
-          <div className="w-10 md:w-0" />
-          <h1 className="text-lg font-semibold text-foreground">
-            {t('app_title')}
-          </h1>
-        </div>
-
+    <header className="h-12 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex items-center justify-end h-full px-4">
         <div className="flex items-center space-x-2">
           <Button
             aria-label={t(theme === 'dark' ? 'theme_light' : 'theme_dark')}

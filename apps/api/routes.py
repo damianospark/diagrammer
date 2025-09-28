@@ -1,12 +1,16 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 import os
 from pathlib import Path
 import json
 import uuid
 import logging
+import base64
 from datetime import datetime
 from typing import Dict, Any, Optional
 from llm_adapter import get_llm_adapter
+from database import db
+from auth import get_current_active_user
+from export_service import export_service
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -67,24 +71,21 @@ async def generate_diagram(request: Dict[str, Any]):
 
         logger.info(f"📊 Generated code length: {len(result.get('code', ''))} characters")
 
-        diagram_id = str(uuid.uuid4())
+        # 다이어그램 저장 (JSON DB 사용)
+        diagram = await db.create_diagram(
+            engine=engine,
+            code=result['code'],
+            render_type="readonly",
+            prompt=prompt,
+            meta=result.get('metadata', {}),
+            ttl_hours=24  # 24시간 TTL
+        )
 
-        # 다이어그램 저장
-        diagrams_db[diagram_id] = {
-            "id": diagram_id,
-            "engine": engine,
-            "code": result['code'],
-            "render_type": "readonly",
-            "prompt": prompt,
-            "meta": result.get('metadata', {}),
-            "created_at": datetime.now().isoformat()
-        }
-
-        logger.info(f"💾 Diagram saved with ID: {diagram_id}")
+        logger.info(f"💾 Diagram saved with ID: {diagram.id}")
 
         return {
             "success": True,
-            "diagram_id": diagram_id,
+            "diagram_id": diagram.id,
             "code": result['code'],
             "engine": engine,
             "metadata": result.get('metadata', {})
@@ -97,10 +98,19 @@ async def generate_diagram(request: Dict[str, Any]):
 @router.get("/diagrams/{diagram_id}")
 async def get_diagram(diagram_id: str):
     """다이어그램 조회"""
-    if diagram_id not in diagrams_db:
+    diagram = await db.get_diagram(diagram_id)
+    if not diagram:
         raise HTTPException(status_code=404, detail="Diagram not found")
 
-    return diagrams_db[diagram_id]
+    return {
+        "id": diagram.id,
+        "engine": diagram.engine,
+        "code": diagram.code,
+        "render_type": diagram.render_type,
+        "prompt": diagram.prompt,
+        "meta": diagram.meta,
+        "created_at": diagram.created_at
+    }
 
 @router.post("/exports")
 async def create_export(request: Dict[str, Any]):
@@ -108,23 +118,41 @@ async def create_export(request: Dict[str, Any]):
     try:
         diagram_id = request.get("diagram_id")
         format_type = request.get("format", "png")
+        title = request.get("title", "Diagram")
 
-        if diagram_id not in diagrams_db:
+        # 다이어그램 존재 확인
+        diagram = await db.get_diagram(diagram_id)
+        if not diagram:
             raise HTTPException(status_code=404, detail="Diagram not found")
 
-        export_id = str(uuid.uuid4())
-        exports_db[export_id] = {
-            "id": export_id,
-            "diagram_id": diagram_id,
-            "format": format_type,
-            "storage_key": f"{diagram_id}.{format_type}",
-            "created_at": datetime.now().isoformat()
-        }
+        # 익스포트 처리
+        if format_type == "png":
+            result = await export_service.export_png(diagram.code, diagram.engine)
+        elif format_type == "svg":
+            result = await export_service.export_svg(diagram.code, diagram.engine)
+        elif format_type == "pptx":
+            result = await export_service.export_pptx(diagram.code, diagram.engine, title)
+        elif format_type == "gslides":
+            result = await export_service.export_gslides(diagram.code, diagram.engine, title)
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported format: {format_type}")
+
+        if not result["success"]:
+            raise HTTPException(status_code=500, detail=result.get("error", "Export failed"))
+
+        # 익스포트 기록 생성
+        export = await db.create_export(
+            diagram_id=diagram_id,
+            format=format_type,
+            storage_key=result.get("file_path")
+        )
 
         return {
             "success": True,
-            "export_id": export_id,
-            "storage_key": f"{diagram_id}.{format_type}"
+            "export_id": export.id,
+            "format": format_type,
+            "storage_key": result.get("file_path"),
+            "metadata": result.get("metadata", {})
         }
 
     except Exception as e:
@@ -185,7 +213,8 @@ async def share_meta(share_id: str):
 @router.post("/share/{share_id}/unlock")
 async def share_unlock(share_id: str, request: Dict[str, Any]):
     """PIN 검증 후 코드 반환"""
-    data = shares_db.get(share_id)
+    shares = load_shares()
+    data = shares.get(share_id)
     if not data:
         raise HTTPException(status_code=404, detail="Not found")
     pin = request.get("pin")
@@ -198,3 +227,23 @@ async def share_unlock(share_id: str, request: Dict[str, Any]):
         "code": data["code"],
         "created_at": data["created_at"],
     }
+
+@router.get("/exports/{export_id}/download")
+async def download_export(export_id: str):
+    """익스포트 파일 다운로드"""
+    try:
+        # 익스포트 기록 조회 (간단한 구현)
+        # 실제로는 export_id로 DB에서 조회해야 함
+        file_path = f"./exports/{export_id}.pptx"  # 임시 구현
+        
+        file_data = await export_service.get_export_file(file_path)
+        if not file_data:
+            raise HTTPException(status_code=404, detail="Export file not found")
+        
+        return {
+            "success": True,
+            "file_data": base64.b64encode(file_data).decode('utf-8'),
+            "file_size": len(file_data)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
