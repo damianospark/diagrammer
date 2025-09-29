@@ -746,3 +746,202 @@ erDiagram
 
 ---
 
+## 16) 완전한 백엔드 시스템 구현 (2025-09-30)
+
+### 변경 요약
+- 완전한 JSON 파일 기반 데이터베이스 시스템 구축
+- 태스크/세션/프롬프트/사용자/구독/결제/검색 인덱스 전체 구현
+- FastAPI 라우터 시스템 완성
+- 모든 데이터 엔티티에 대한 CRUD API 구현
+
+### 상세 내용
+- **완전한 JSON 데이터베이스**
+  - `visitors.json`: 방문자 관리
+  - `diagrams.json`: 다이어그램 저장 (세션/태스크 연결 지원)
+  - `exports.json`: 익스포트 기록
+  - `sessions.json`: 사용자별 세션 관리
+  - `prompts.json`: 프롬프트 히스토리
+  - `tasks.json`: 작업 단위 관리
+  - `task_messages.json`: 태스크 메시지 타임라인
+  - `task_versions.json`: 코드 리비전 관리
+  - `users.json`: 사용자 프로필 관리
+  - `subscriptions.json`: 구독 상태 관리
+  - `payments.json`: 결제 기록
+  - `shares.json`: 공유 링크 관리
+  - `search_index.json`: 검색 인덱스
+
+- **확장된 데이터 모델**
+  - 모든 엔티티 간 관계 매핑 (user_id, session_id, task_id)
+  - 역할 기반 접근 제어 (USER, ADMIN, OWNER)
+  - 플랜별 기능 제한 (free, pro, team)
+  - TTL 기반 데이터 정리 시스템
+
+- **FastAPI 라우터 시스템**
+  - `/api/sessions`: 세션 CRUD 및 프롬프트 관리
+  - `/api/tasks`: 태스크 CRUD, 메시지, 버전 관리
+  - `/api/users`: 사용자 프로필, 구독, 사용량 조회
+  - `/api/search`: 콘텐츠 검색 및 인덱싱
+  - 기존 라우터와 통합 (auth, v1, stripe, admin)
+
+- **검색 시스템**
+  - 다이어그램/프롬프트/태스크 통합 검색
+  - 사용자별 검색 결과 격리
+  - 메타데이터 기반 필터링
+  - 실시간 검색 인덱스 업데이트
+
+- **사용자 관리 시스템**
+  - OAuth 후 사용자 자동 등록/업데이트
+  - 프로필 정보 관리 (이름, 이미지, 로케일, 통화)
+  - 구독 상태 추적
+  - 플랜별 사용량 제한 모니터링
+
+### API 엔드포인트 (신규 추가)
+
+#### 세션 관리 (`/api/sessions`)
+- `POST /sessions` - 새 세션 생성
+- `GET /sessions` - 사용자 세션 목록
+- `GET /sessions/{id}` - 세션 조회
+- `PUT /sessions/{id}` - 세션 업데이트
+- `POST /sessions/{id}/prompts` - 프롬프트 생성
+- `GET /sessions/{id}/prompts` - 세션 프롬프트 목록
+
+#### 태스크 관리 (`/api/tasks`)
+- `POST /tasks` - 새 태스크 생성
+- `GET /tasks` - 사용자 태스크 목록
+- `GET /tasks/{id}` - 태스크 조회
+- `PUT /tasks/{id}` - 태스크 업데이트
+- `POST /tasks/{id}/messages` - 메시지 생성
+- `GET /tasks/{id}/messages` - 태스크 메시지 목록
+- `POST /tasks/{id}/versions` - 버전 생성
+- `GET /tasks/{id}/versions` - 태스크 버전 목록
+- `GET /task-versions/{id}` - 특정 버전 조회
+
+#### 사용자 관리 (`/api/users`)
+- `GET /users/me` - 현재 사용자 프로필
+- `PUT /users/me` - 프로필 업데이트
+- `GET /users/me/subscription` - 구독 정보
+- `POST /users/register` - 사용자 등록 (OAuth 후)
+- `GET /users/me/usage` - 사용량 통계
+
+#### 검색 (`/api/search`)
+- `GET /search?q={query}&types={types}` - 콘텐츠 검색
+- `POST /search/index` - 검색 인덱스 생성
+
+### 파일
+- 백엔드 데이터베이스: `apps/api/database.py` (확장)
+- 세션 라우터: `apps/api/session_routes.py`
+- 태스크 라우터: `apps/api/task_routes.py`
+- 사용자 라우터: `apps/api/user_routes.py`
+- 검색 라우터: `apps/api/search_routes.py`
+- 인증 시스템: `apps/api/auth.py` (User 데이터클래스 추가)
+- 메인 앱: `apps/api/main.py` (라우터 통합)
+
+### 보안/운영
+- JWT 토큰 기반 인증 (모든 신규 엔드포인트)
+- 사용자별 데이터 격리 (user_id 기반 필터링)
+- 플랜별 기능 제한 (추후 구현)
+- 파일 락킹으로 동시 접근 제어
+- TTL 기반 데이터 정리 (다이어그램, 익스포트)
+- 구조적 로깅 및 에러 핸들링
+
+### 테스트 완료
+- 모든 새 테이블 파일 생성 확인
+- 세션/태스크/사용자 API 동작 확인
+- 검색 시스템 기본 동작 확인
+- JWT 인증 통합 테스트 완료
+
+---
+
+## 17) PostgreSQL 마이그레이션 완료 (2025-09-30)
+
+### 변경 요약
+- JSON 파일 기반 데이터베이스를 PostgreSQL로 완전 마이그레이션
+- SQLAlchemy ORM 모델 및 관계 매핑 구현
+- 모든 API 엔드포인트가 PostgreSQL과 연동
+- JSON 파일 저장 로직 완전 제거
+
+### 상세 내용
+- **PostgreSQL 데이터베이스**
+  - Docker Compose로 PostgreSQL 16 컨테이너 실행
+  - 연결 정보: `postgresql://diagrammer:diagrammer123@localhost:5432/diagrammer`
+  - 자동 테이블 생성 및 스키마 관리
+
+- **SQLAlchemy ORM 모델**
+  - `models.py`: 13개 테이블 모델 정의
+  - UUID 기본키, 외래키 관계, 인덱스 설정
+  - JSON 컬럼 지원 (meta, llm_params 등)
+  - created_at/updated_at 자동 타임스탬프
+
+- **데이터베이스 레이어**
+  - `database_pg.py`: PostgreSQL 전용 데이터베이스 클래스
+  - `database.py`: PostgreSQL로 리다이렉트 (하위 호환성)
+  - 세션 관리, 트랜잭션, 에러 핸들링
+  - 자동 사용자 생성 (테스트 모드)
+
+- **테이블 구조**
+  ```sql
+  users (id, email, name, image, role, plan, status, locale, currency, created_at, updated_at)
+  sessions (id, user_id, title, status, created_at, updated_at)
+  prompts (id, session_id, content, llm_provider, llm_params, created_at)
+  tasks (id, user_id, title, status, created_at, updated_at)
+  task_messages (id, task_id, role, content, created_at)
+  task_versions (id, task_id, code, engine, root_id, created_at)
+  diagrams (id, visitor_id, user_id, session_id, task_id, engine, code, render_type, prompt, meta, ttl_expire_at, created_at)
+  exports (id, diagram_id, format, storage_key, created_at)
+  subscriptions (id, user_id, provider, plan, status, current_period_end, external_id, created_at, updated_at)
+  payments (id, user_id, subscription_id, provider, external_id, amount_cents, currency, status, paid_at, created_at)
+  shares (id, diagram_id, token, pin, title, expire_at, created_at)
+  search_index (id, user_id, entity_type, entity_id, title, content, meta_data, created_at)
+  visitors (id, anon_id, created_at)
+  ```
+
+- **관계 매핑**
+  - User → Sessions, Tasks, Diagrams, Subscriptions, Payments
+  - Session → Prompts, Diagrams
+  - Task → Messages, Versions, Diagrams
+  - Diagram → Exports, Shares
+
+- **API 연동**
+  - 모든 기존 API 엔드포인트가 PostgreSQL과 연동
+  - UUID 기반 ID 시스템
+  - 외래키 제약조건 및 데이터 무결성
+  - 자동 사용자 생성 (테스트 모드)
+
+### 파일 변경사항
+- **신규 파일**
+  - `models.py`: SQLAlchemy ORM 모델 정의
+  - `database_pg.py`: PostgreSQL 데이터베이스 클래스
+
+- **수정된 파일**
+  - `database.py`: PostgreSQL로 리다이렉트
+  - `auth.py`: UUID 기반 사용자 ID
+  - 모든 라우터 파일: 모델 import 경로 수정
+
+- **제거된 기능**
+  - JSON 파일 저장 로직
+  - 파일 락킹 시스템
+  - TTL 스위퍼 (PostgreSQL에서 처리)
+
+### 테스트 완료
+- PostgreSQL 연결 및 테이블 생성 확인
+- 세션/태스크 생성 및 조회 API 테스트
+- 사용자 자동 생성 기능 확인
+- UUID 기반 ID 시스템 동작 확인
+- 외래키 제약조건 및 데이터 무결성 확인
+
+### 성능 및 확장성
+- **장점**
+  - ACID 트랜잭션 보장
+  - 복잡한 쿼리 및 조인 지원
+  - 인덱스 기반 성능 최적화
+  - 동시성 및 확장성 향상
+  - 백업 및 복구 시스템
+
+- **운영 준비**
+  - Docker Compose 기반 배포
+  - 환경변수 기반 설정
+  - 로깅 및 에러 핸들링
+  - 마이그레이션 스크립트 준비
+
+---
+

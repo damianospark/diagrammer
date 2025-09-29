@@ -10,49 +10,186 @@ import { Badge } from '@/components/ui/badge'
 import { CheckCircle, XCircle, PauseCircle, Shield, User, Crown, Zap, AlertCircle } from 'lucide-react'
 import { useAuth, type User } from '@/lib/fastapi-auth'
 
+// 하드코딩된 테스트 사용자 (fallback용)
+const FALLBACK_TEST_USERS: User[] = [
+  {
+    id: "test-user-001",
+    email: "user@test.com",
+    name: "테스트 사용자",
+    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=user",
+    role: "USER",
+    plan: "free",
+    status: "ACTIVE"
+  },
+  {
+    id: "test-user-002",
+    email: "pro@test.com",
+    name: "Pro 사용자",
+    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=pro",
+    role: "USER",
+    plan: "pro",
+    status: "ACTIVE"
+  },
+  {
+    id: "test-admin-001",
+    email: "admin@test.com",
+    name: "관리자",
+    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=admin",
+    role: "ADMIN",
+    plan: "pro",
+    status: "ACTIVE"
+  },
+  {
+    id: "test-owner-001",
+    email: "owner@test.com",
+    name: "소유자",
+    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=owner",
+    role: "OWNER",
+    plan: "team",
+    status: "ACTIVE"
+  }
+]
+
 export default function TestLoginPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const { login, isLoading, mounted } = useAuth()
+  const [mounted, setMounted] = useState(false)
+  const { login, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
+    console.log('TestLoginPage: Component mounted')
+    setMounted(true)
+
     const fetchTestUsers = async () => {
       try {
+        console.log('TestLoginPage: Fetching test users...')
         const response = await fetch('http://localhost:8000/api/auth/users')
+        console.log('TestLoginPage: Response status:', response.status)
         if (response.ok) {
           const data = await response.json()
+          console.log('TestLoginPage: Test users data:', data)
           setUsers(data.users)
         } else {
-          console.error('Failed to fetch test users:', await response.text())
+          const errorText = await response.text()
+          console.error('TestLoginPage: Failed to fetch test users:', response.status, errorText)
+          // 에러가 발생하면 fallback 사용자 사용
+          console.log('TestLoginPage: Using fallback test users')
+          setUsers(FALLBACK_TEST_USERS)
         }
       } catch (error) {
-        console.error('Error fetching test users:', error)
+        console.error('TestLoginPage: Error fetching test users:', error)
+        // 네트워크 에러가 발생하면 fallback 사용자 사용
+        console.log('TestLoginPage: Using fallback test users due to network error')
+        setUsers(FALLBACK_TEST_USERS)
       } finally {
+        console.log('TestLoginPage: Setting loading to false')
         setLoading(false)
       }
     }
+
+    // 바로 실행
     fetchTestUsers()
   }, [])
 
+  // 사용자가 없으면 fallback 사용자로 초기화
+  useEffect(() => {
+    if (mounted && users.length === 0 && !loading) {
+      console.log('TestLoginPage: No users loaded, using fallback')
+      setUsers(FALLBACK_TEST_USERS)
+    }
+  }, [mounted, users.length, loading])
+
   const handleLogin = async (email: string) => {
     try {
-      await login(email)
-      router.push('/app') // 로그인 성공 후 대시보드로 리디렉션
+      console.log('TestLoginPage: Attempting login for:', email)
+      const result = await login(email)
+      console.log('TestLoginPage: Login successful:', result)
+
+      // 로그인 성공 후 잠시 대기 (쿠키 설정 완료 대기)
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // 사용자 역할에 따라 리디렉션 결정
+      const userRole = result.user.role
+      console.log('TestLoginPage: User role:', userRole)
+
+      if (userRole === 'ADMIN' || userRole === 'OWNER') {
+        console.log('TestLoginPage: Redirecting to /admin (admin/owner user)')
+        // 관리자/소유자는 admin 페이지로 이동 (router.push 사용)
+        router.push('/admin')
+      } else {
+        console.log('TestLoginPage: Redirecting to /app (regular user)')
+        router.push('/app')
+      }
     } catch (error) {
-      console.error('Error during test login:', error)
+      console.error('TestLoginPage: Error during test login:', error)
       alert('Test login failed: ' + (error as Error).message)
     }
   }
 
-  // Hydration 오류 방지: 클라이언트 마운트 전에는 로딩 상태 유지
-  if (!mounted || loading) {
+  // 간단한 로딩 처리
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>테스트 사용자 로딩 중...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 mt-16">
+        <Card className="w-full max-w-2xl">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">테스트 모드 로그인</CardTitle>
+            <p className="text-muted-foreground">
+              테스트 사용자를 불러오는 중...
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <div className="animate-pulse">
+                <div className="h-2 bg-gray-200 rounded w-48 mx-auto"></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
+
+  // 사용자가 없으면 fallback 사용자 표시
+  if (users.length === 0) {
+    console.log('TestLoginPage: No users loaded, using fallback')
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 mt-16">
+        <Card className="w-full max-w-2xl">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">테스트 모드 로그인</CardTitle>
+            <p className="text-muted-foreground">
+              백엔드 연결 실패. 기본 테스트 사용자를 사용합니다.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {FALLBACK_TEST_USERS.map((user) => (
+                <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <img src={user.image} alt={user.name} className="w-10 h-10 rounded-full" />
+                    <div>
+                      <p className="font-medium">{user.name}</p>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                      <p className="text-xs text-muted-foreground">{user.role} • {user.plan}</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => handleLogin(user.email)}
+                    disabled={isLoading}
+                    className="ml-4"
+                  >
+                    {isLoading ? "로그인 중..." : "로그인"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
 
   const activeUsers = users.filter(user => user.status === 'ACTIVE')
   const inactiveUsers = users.filter(user => user.status !== 'ACTIVE')

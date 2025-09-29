@@ -54,19 +54,37 @@ class FastAPIAuth {
     } else {
       localStorage.removeItem('auth_user')
     }
+    this.user = user
+
+    // 인증 상태 변경 이벤트 발생
+    window.dispatchEvent(new CustomEvent('authStateChanged', {
+      detail: { token: this.token, user }
+    }))
   }
 
   private setToken(token: string | null) {
     if (typeof window === 'undefined') return
     if (token) {
       localStorage.setItem('auth_token', token)
+      // 쿠키에도 저장 (미들웨어에서 확인용)
+      document.cookie = `auth_token=${token}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`
     } else {
       localStorage.removeItem('auth_token')
+      // 쿠키 삭제
+      document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
     }
     this.token = token
+
+    // 인증 상태 변경 이벤트 발생
+    window.dispatchEvent(new CustomEvent('authStateChanged', {
+      detail: { token, user: this.user }
+    }))
   }
 
   async login(email: string): Promise<LoginResponse> {
+    console.log('FastAPI Auth: Attempting login for:', email)
+    console.log('API_BASE_URL:', API_BASE_URL)
+
     const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
@@ -75,12 +93,16 @@ class FastAPIAuth {
       body: JSON.stringify({ email }),
     })
 
+    console.log('Login response status:', response.status)
+
     if (!response.ok) {
       const error = await response.json()
+      console.error('Login error:', error)
       throw new Error(error.detail || 'Login failed')
     }
 
     const data: LoginResponse = await response.json()
+    console.log('Login response data:', data)
 
     this.setToken(data.access_token)
     this.setStoredUser(data.user)
@@ -180,15 +202,29 @@ class FastAPIAuth {
   }
 
   getToken(): string | null {
+    if (typeof window === 'undefined') return null
+    // localStorage에서 최신 토큰 확인
+    const storedToken = localStorage.getItem('auth_token')
+    if (storedToken && storedToken !== this.token) {
+      this.token = storedToken
+    }
     return this.token
   }
 
   getUser(): User | null {
+    if (typeof window === 'undefined') return null
+    // localStorage에서 최신 사용자 정보 확인
+    const storedUser = this.getStoredUser()
+    if (storedUser && (!this.user || storedUser.id !== this.user.id)) {
+      this.user = storedUser
+    }
     return this.user
   }
 
   isAuthenticated(): boolean {
-    return !!this.token && !!this.user
+    const token = this.getToken()
+    const user = this.getUser()
+    return !!token && !!user
   }
 
   hasRole(role: 'USER' | 'ADMIN' | 'OWNER'): boolean {
@@ -226,6 +262,17 @@ class FastAPIAuth {
 // 싱글톤 인스턴스
 export const fastapiAuth = new FastAPIAuth()
 
+// 서버사이드에서 사용할 수 있는 getCurrentUser 함수
+export const getCurrentUser = async (): Promise<User | null> => {
+  // 서버사이드에서는 쿠키에서 토큰을 읽어야 함
+  if (typeof window === 'undefined') {
+    // 서버사이드에서는 쿠키를 직접 읽을 수 없으므로 null 반환
+    // 클라이언트사이드에서 인증 확인하도록 함
+    return null
+  }
+  return await fastapiAuth.getCurrentUser()
+}
+
 // React Hook
 export function useAuth() {
   const [mounted, setMounted] = React.useState(false)
@@ -239,6 +286,10 @@ export function useAuth() {
     setAuthState(prev => ({ ...prev, isLoading: true }))
     try {
       const result = await fastapiAuth.login(email)
+      console.log('useAuth: Login successful, setting auth state:', {
+        user: result.user,
+        hasToken: !!result.access_token
+      })
       setAuthState({
         user: result.user,
         token: result.access_token,
@@ -282,8 +333,40 @@ export function useAuth() {
     setMounted(true)
 
     // 컴포넌트 마운트 시 토큰 검증
-    if (fastapiAuth.getToken()) {
+    const token = fastapiAuth.getToken()
+    const user = fastapiAuth.getUser()
+    console.log('useAuth: Initial token check:', token ? 'exists' : 'none')
+    console.log('useAuth: Initial user check:', user ? 'exists' : 'none')
+
+    if (token && user) {
+      // 토큰과 사용자 정보가 모두 있으면 즉시 인증 상태 설정
+      console.log('useAuth: Setting auth state from stored data:', { user, token })
+      setAuthState({
+        user,
+        token,
+        isLoading: false,
+      })
+
+      // 백그라운드에서 토큰 검증
       fastapiAuth.verifyToken().then(isValid => {
+        console.log('useAuth: Token validation result:', isValid)
+        if (!isValid) {
+          console.log('useAuth: Token invalid, clearing auth state')
+          setAuthState({
+            user: null,
+            token: null,
+            isLoading: false,
+          })
+        }
+      }).catch(error => {
+        console.error('useAuth: Token validation error:', error)
+        // 네트워크 오류 등으로 검증 실패해도 기존 상태 유지
+        console.log('useAuth: Keeping existing auth state due to validation error')
+      })
+    } else if (token) {
+      // 토큰만 있고 사용자 정보가 없는 경우
+      fastapiAuth.verifyToken().then(isValid => {
+        console.log('useAuth: Token validation result:', isValid)
         if (!isValid) {
           setAuthState({
             user: null,
@@ -291,28 +374,66 @@ export function useAuth() {
             isLoading: false,
           })
         } else {
-          setAuthState(prev => ({
-            ...prev,
-            user: fastapiAuth.getUser(),
+          const user = fastapiAuth.getUser()
+          console.log('useAuth: Setting user from token:', user)
+          setAuthState({
+            user,
+            token,
             isLoading: false,
-          }))
+          })
         }
+      }).catch(error => {
+        console.error('useAuth: Token validation error:', error)
+        setAuthState({
+          user: null,
+          token: null,
+          isLoading: false,
+        })
       })
     } else {
+      console.log('useAuth: No token found, setting loading to false')
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
       }))
     }
+
+    // 인증 상태 변경 이벤트 감지
+    const handleAuthStateChange = (e: CustomEvent) => {
+      console.log('useAuth: Auth state changed event received:', e.detail)
+      const { token, user } = e.detail
+      setAuthState({
+        user,
+        token,
+        isLoading: false,
+      })
+    }
+
+    window.addEventListener('authStateChanged', handleAuthStateChange as EventListener)
+    return () => window.removeEventListener('authStateChanged', handleAuthStateChange as EventListener)
   }, [])
 
+  const isAuthenticated = mounted ? !!(authState.user && authState.token) : false
+
+  console.log('useAuth: Returning state:', {
+    mounted,
+    isAuthenticated,
+    user: authState.user,
+    hasToken: !!authState.token,
+    isLoading: authState.isLoading,
+    authStateUser: authState.user,
+    authStateToken: authState.token
+  })
+
   return {
-    ...authState,
+    user: authState.user,
+    token: authState.token,
+    isLoading: authState.isLoading,
     mounted,
     login,
     logout,
     refreshUser,
-    isAuthenticated: mounted ? fastapiAuth.isAuthenticated() : false,
+    isAuthenticated,
     hasRole: fastapiAuth.hasRole.bind(fastapiAuth),
     hasPlan: fastapiAuth.hasPlan.bind(fastapiAuth),
     fetchWithAuth: fastapiAuth.fetchWithAuth.bind(fastapiAuth),

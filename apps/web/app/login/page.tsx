@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Github, Chrome, Facebook, TestTube } from "lucide-react"
 
 export default function LoginPage() {
+  console.log('LoginPage: Component loaded - redirecting to social login page')
+
   const handleOAuthSignIn = (provider: string) => {
     signIn(provider, { callbackUrl: "/" })
   }

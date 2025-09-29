@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/lib/fastapi-auth"
@@ -43,6 +43,10 @@ export function GlobalHeader() {
   const { theme, toggleTheme } = useTheme()
   const pathname = usePathname()
 
+  console.log('GlobalHeader: mounted:', mounted, 'isAuthenticated:', isAuthenticated, 'user:', user)
+  console.log('GlobalHeader: user role:', user?.role, 'user id:', user?.id)
+
+
   const handleLogout = async () => {
     await logout()
     window.location.href = "/"
@@ -76,7 +80,7 @@ export function GlobalHeader() {
             >
               요금제
             </Link>
-            {isAuthenticated && (
+            {mounted && isAuthenticated && (
               <>
                 <Link
                   href="/app"

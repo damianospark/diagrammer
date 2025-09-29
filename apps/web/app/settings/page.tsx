@@ -24,10 +24,12 @@ import {
   Key
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useTheme } from "@/hooks/theme"
 
 export default function SettingsPage() {
   const { user, isLoading, isAuthenticated, mounted, fetchWithAuth } = useAuth()
   const { toast } = useToast()
+  const { theme, setTheme, chartTheme, setChartTheme } = useTheme()
   const [isSaving, setIsSaving] = useState(false)
   const [name, setName] = useState(user?.name || "")
   const [email, setEmail] = useState(user?.email || "")
@@ -354,11 +356,11 @@ export default function SettingsPage() {
 
             {/* 환경설정 탭 */}
             <TabsContent value="preferences" className="space-y-6">
-      <Card>
-        <CardHeader>
+              <Card>
+                <CardHeader>
                   <CardTitle>환경설정</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+                </CardHeader>
+                <CardContent className="space-y-6">
                   <div className="space-y-4">
                     <div>
                       <h4 className="font-medium">언어</h4>
@@ -378,19 +380,75 @@ export default function SettingsPage() {
                         인터페이스 테마를 선택하세요.
                       </p>
                       <div className="mt-2 space-x-2">
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant={theme === "light" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setTheme("light")}
+                        >
                           라이트
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant={theme === "dark" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setTheme("dark")}
+                        >
                           다크
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          시스템
                         </Button>
                       </div>
                     </div>
 
-          <div>
+                    <div>
+                      <h4 className="font-medium">차트 테마</h4>
+                      <p className="text-sm text-muted-foreground">
+                        대시보드 차트의 색상 테마를 선택하세요.
+                      </p>
+                      <div className="mt-2 space-x-2">
+                        <Button
+                          variant={chartTheme === "default" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setChartTheme("default")}
+                        >
+                          기본
+                        </Button>
+                        <Button
+                          variant={chartTheme === "dark" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setChartTheme("dark")}
+                        >
+                          다크
+                        </Button>
+                        <Button
+                          variant={chartTheme === "light" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setChartTheme("light")}
+                        >
+                          라이트
+                        </Button>
+                        <Button
+                          variant={chartTheme === "blue" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setChartTheme("blue")}
+                        >
+                          블루
+                        </Button>
+                        <Button
+                          variant={chartTheme === "green" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setChartTheme("green")}
+                        >
+                          그린
+                        </Button>
+                        <Button
+                          variant={chartTheme === "purple" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setChartTheme("purple")}
+                        >
+                          퍼플
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
                       <h4 className="font-medium">알림</h4>
                       <p className="text-sm text-muted-foreground">
                         이메일 알림 설정을 관리하세요.
@@ -406,13 +464,13 @@ export default function SettingsPage() {
                           <input type="checkbox" id="marketing-emails" />
                           <label htmlFor="marketing-emails" className="text-sm">
                             마케팅 이메일 받기
-            </label>
+                          </label>
                         </div>
                       </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>

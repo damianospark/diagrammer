@@ -4,6 +4,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from dataclasses import dataclass
 import os
 from dotenv import load_dotenv
 
@@ -23,7 +24,7 @@ security = HTTPBearer()
 # 테스트 모드 사용자 데이터
 TEST_USERS = {
     "user@test.com": {
-        "id": "test-user-001",
+        "id": "550e8400-e29b-41d4-a716-446655440001",
         "email": "user@test.com",
         "name": "테스트 사용자",
         "image": "https://api.dicebear.com/7.x/avataaars/svg?seed=user",
@@ -32,7 +33,7 @@ TEST_USERS = {
         "status": "ACTIVE"
     },
     "pro@test.com": {
-        "id": "test-user-002",
+        "id": "550e8400-e29b-41d4-a716-446655440002",
         "email": "pro@test.com",
         "name": "Pro 사용자",
         "image": "https://api.dicebear.com/7.x/avataaars/svg?seed=pro",
@@ -41,7 +42,7 @@ TEST_USERS = {
         "status": "ACTIVE"
     },
     "admin@test.com": {
-        "id": "test-admin-001",
+        "id": "550e8400-e29b-41d4-a716-446655440003",
         "email": "admin@test.com",
         "name": "관리자",
         "image": "https://api.dicebear.com/7.x/avataaars/svg?seed=admin",
@@ -50,7 +51,7 @@ TEST_USERS = {
         "status": "ACTIVE"
     },
     "owner@test.com": {
-        "id": "test-owner-001",
+        "id": "550e8400-e29b-41d4-a716-446655440004",
         "email": "owner@test.com",
         "name": "소유자",
         "image": "https://api.dicebear.com/7.x/avataaars/svg?seed=owner",
@@ -88,7 +89,17 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
     except JWTError:
         return None
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
+@dataclass
+class User:
+    id: str
+    email: str
+    name: str
+    image: str
+    role: str
+    plan: str
+    status: str
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
     """현재 사용자 정보 반환"""
     token = credentials.credentials
     payload = verify_token(token)
@@ -109,19 +120,23 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         )
     
     # 테스트 모드에서 사용자 정보 반환
-    user = TEST_USERS.get(email)
-    if user is None:
+    user_data = TEST_USERS.get(email)
+    if user_data is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    return user
+    # UUID를 문자열로 변환
+    user_data_copy = user_data.copy()
+    user_data_copy['id'] = str(user_data_copy['id'])
+    
+    return User(**user_data_copy)
 
-def get_current_active_user(current_user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
+def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     """활성 사용자만 반환"""
-    if current_user.get("status") != "ACTIVE":
+    if current_user.status != "ACTIVE":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user"
@@ -130,8 +145,8 @@ def get_current_active_user(current_user: Dict[str, Any] = Depends(get_current_u
 
 def require_role(required_role: str):
     """역할 기반 접근 제어"""
-    def role_checker(current_user: Dict[str, Any] = Depends(get_current_active_user)) -> Dict[str, Any]:
-        user_role = current_user.get("role")
+    def role_checker(current_user: User = Depends(get_current_active_user)) -> User:
+        user_role = current_user.role
         
         # 역할 계층: OWNER > ADMIN > USER
         role_hierarchy = {"USER": 1, "ADMIN": 2, "OWNER": 3}

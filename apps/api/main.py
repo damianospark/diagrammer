@@ -5,6 +5,10 @@ from routes import router
 from auth_routes import router as auth_router
 from stripe_routes import router as stripe_router
 from admin_routes import router as admin_router
+from session_routes import router as session_router
+from task_routes import router as task_router
+from user_routes import router as user_router
+from search_routes import router as search_router
 
 # FastAPI 앱 생성
 app = FastAPI(title="Diagrammer API", description="AI 기반 다이어그램 생성 및 편집 API", version="0.1.0")
@@ -23,6 +27,10 @@ app.include_router(router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(stripe_router, prefix="/api/stripe", tags=["stripe"])
 app.include_router(admin_router, prefix="/api/admin", tags=["admin"])
+app.include_router(session_router, prefix="/api/sessions", tags=["sessions"])
+app.include_router(task_router, prefix="/api/tasks", tags=["tasks"])
+app.include_router(user_router, prefix="/api/users", tags=["users"])
+app.include_router(search_router, prefix="/api/search", tags=["search"])
 
 @app.get("/healthz")
 async def health_check():

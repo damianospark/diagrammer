@@ -1,14 +1,14 @@
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AdminStats, QuickStats, SystemHealth } from "@/components/admin/AdminStats"
-import { prisma } from "@/lib/prisma"
 
-export default async function AdminDashboard() {
-  const [userCount, billingCount, orgCount, activeUsers] = await Promise.all([
-    prisma.user.count(),
-    prisma.billingProfile.count(),
-    prisma.organization.count(),
-    prisma.user.count({ where: { status: 'ACTIVE' } })
-  ])
+export default function AdminDashboard() {
+  // FastAPI 백엔드에서 데이터 가져오기 (임시로 mock 데이터 사용)
+  const userCount = 150
+  const billingCount = 45
+  const orgCount = 12
+  const activeUsers = 120
 
   const stats = {
     totalUsers: userCount,

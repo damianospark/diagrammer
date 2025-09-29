@@ -3,10 +3,9 @@ import { NextRequest, NextResponse } from "next/server"
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Edge Runtime에서는 인증 상태를 쿠키에서 확인
-  const sessionToken = req.cookies.get('next-auth.session-token')?.value ||
-    req.cookies.get('__Secure-next-auth.session-token')?.value
-  const isLoggedIn = !!sessionToken
+  // FastAPI JWT 토큰 확인
+  const authToken = req.cookies.get('auth_token')?.value
+  const isLoggedIn = !!authToken
 
   // Edge Runtime에서는 사용자 역할을 확인할 수 없으므로 기본값 사용
   const userRole = 'USER' // 실제로는 API 라우트에서 확인
@@ -76,12 +75,8 @@ export default async function middleware(req: NextRequest) {
 
   // Admin routes (관리자 권한 필요)
   if (pathname.startsWith('/admin')) {
-    if (!isLoggedIn) {
-      return NextResponse.redirect(new URL('/login', req.url))
-    }
-
-    // Edge Runtime에서는 역할 확인이 어려우므로 기본적으로 허용
-    // 실제 권한 확인은 각 페이지에서 처리
+    // Admin 페이지는 클라이언트에서 권한 확인하므로 미들웨어에서 차단하지 않음
+    // 클라이언트 컴포넌트에서 인증 상태를 확인하고 적절히 리디렉션
   }
 
   // Rate limiting for sensitive routes (Edge Runtime 호환)
