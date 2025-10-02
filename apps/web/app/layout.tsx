@@ -1,7 +1,8 @@
+import { GlobalHeader } from '@/components/GlobalHeader'
+import { ClientLogger } from '@/components/ClientLogger'
 import { I18nProvider } from '@/hooks/i18n'
 import { ThemeProvider } from '@/hooks/theme'
 import { ToastProvider } from '@/hooks/use-toast'
-import { GlobalHeader } from '@/components/GlobalHeader'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -21,6 +22,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={inter.className}>
+        <ClientLogger />
         <ThemeProvider>
           <I18nProvider>
             <ToastProvider>

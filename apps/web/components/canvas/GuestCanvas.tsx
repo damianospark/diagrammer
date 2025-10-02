@@ -559,7 +559,53 @@ export const GuestCanvas = forwardRef<GuestCanvasHandle, GuestCanvasProps>(funct
 
   // 다이어그램 렌더링 완료 핸들러 - 캡처 프로세스 시작
   const handleRendered = useCallback((status: 'ok' | 'error', message?: string, engineType?: 'mermaid' | 'visjs') => {
-    console.log(`💬 GuestCanvas: handleRendered called with status=${status}, engineType=${engineType || 'unknown'}`)
+    console.log(`\n=== GUEST CANVAS RENDER COMPLETE ===`)
+    console.log(`💬 Status: ${status}, Engine: ${engineType || 'unknown'}`)
+    
+    if (status === 'ok' && engineType === 'mermaid') {
+      console.log('\n🧜‍♀️ MERMAID RENDER ANALYSIS:')
+      console.log(`📝 Original code length: ${code.length} characters`)
+      console.log(`📝 Code preview: ${code.substring(0, 100)}${code.length > 100 ? '...' : ''}`)
+      
+      // SVG 분석
+      setTimeout(() => {
+        if (visibleRef.current) {
+          const svgEl = visibleRef.current.querySelector('svg')
+          if (svgEl) {
+            console.log('\n🎨 MERMAID SVG STRUCTURE:')
+            console.log(`  - SVG dimensions: ${svgEl.getAttribute('width')} x ${svgEl.getAttribute('height')}`)
+            console.log(`  - ViewBox: ${svgEl.getAttribute('viewBox')}`)
+            
+            const nodes = svgEl.querySelectorAll('.node')
+            const edges = svgEl.querySelectorAll('.edge, .edgePath')
+            const labels = svgEl.querySelectorAll('.nodeLabel, .edgeLabel')
+            
+            console.log(`  - Nodes found: ${nodes.length}`)
+            console.log(`  - Edges found: ${edges.length}`)
+            console.log(`  - Labels found: ${labels.length}`)
+            
+            // 노드 상세 정보
+            nodes.forEach((node, index) => {
+              const rect = node.querySelector('rect, circle, polygon')
+              const label = node.querySelector('.nodeLabel')
+              const text = label?.textContent?.trim() || 'no text'
+              console.log(`    Node ${index}: "${text}" (${rect?.tagName || 'unknown shape'})`)
+            })
+            
+            // 엣지 상세 정보
+            edges.forEach((edge, index) => {
+              const path = edge.querySelector('path')
+              const marker = edge.querySelector('marker-end, .arrowhead')
+              console.log(`    Edge ${index}: path=${!!path}, arrow=${!!marker}`)
+            })
+            
+            console.log('\n✅ MERMAID RENDER SUCCESS - SVG structure analyzed')
+          } else {
+            console.log('⚠️ No SVG element found in rendered content')
+          }
+        }
+      }, 50)
+    }
     
     // 렌더링 상태 업데이트 - 즉시 적용
     setRendering(false)
@@ -573,6 +619,7 @@ export const GuestCanvas = forwardRef<GuestCanvasHandle, GuestCanvasProps>(funct
     onRendered?.(status, message)
     
     if (status === 'error') {
+      console.log(`❌ RENDER ERROR: ${message}`)
       setRenderError(message || '다이어그램 렌더링 실패')
       setCaptureError(null)
     } else {
@@ -589,7 +636,9 @@ export const GuestCanvas = forwardRef<GuestCanvasHandle, GuestCanvasProps>(funct
         }, 100)
       }
     }
-  }, [captureDiagram, onRendered])
+    
+    console.log('=== GUEST CANVAS RENDER COMPLETE END ===\n')
+  }, [captureDiagram, onRendered, code, visibleRef])
 
   return (
     <div className="relative flex h-full w-full flex-col">

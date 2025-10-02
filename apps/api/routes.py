@@ -228,6 +228,40 @@ async def share_unlock(share_id: str, request: Dict[str, Any]):
         "created_at": data["created_at"],
     }
 
+@router.post("/export/pptx")
+async def export_pptx_endpoint(request: Dict[str, Any]):
+    """PPTX 내보내기 - 파일 다운로드 또는 클립보드 데이터 반환"""
+    try:
+        from fastapi.responses import Response
+        
+        diagram_data = request.get("shapes", [])
+        connections = request.get("connections", [])
+        format_type = request.get("format", "file")  # "file" 또는 "clipboard"
+        
+        if format_type == "file":
+            # PPTX 파일 생성
+            pptx_bytes = await export_service.create_pptx_from_konva(diagram_data, connections)
+            return Response(
+                content=pptx_bytes,
+                media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                headers={"Content-Disposition": "attachment; filename=diagram.pptx"}
+            )
+        elif format_type == "clipboard":
+            # 클립보드 호환 데이터 생성
+            clipboard_data = await export_service.create_clipboard_data_from_konva(diagram_data, connections)
+            return {
+                "success": True,
+                "format": "powerpoint",
+                "data": clipboard_data,
+                "mime_type": "application/x-mspowerpoint"
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Invalid format type")
+            
+    except Exception as e:
+        logger.error(f"PPTX export error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/exports/{export_id}/download")
 async def download_export(export_id: str):
     """익스포트 파일 다운로드"""

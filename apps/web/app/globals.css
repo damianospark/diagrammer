@@ -107,6 +107,20 @@
   color: var(--btn-fg) !important;
 }
 
+.canvas-action-btn--pptx {
+  --btn-bg: #f97316;
+  --btn-fg: #ffffff;
+  background: var(--btn-bg) !important;
+  color: var(--btn-fg) !important;
+}
+
+.canvas-action-btn--pptx-file {
+  --btn-bg: #dc2626;
+  --btn-fg: #ffffff;
+  background: var(--btn-bg) !important;
+  color: var(--btn-fg) !important;
+}
+
 .canvas-action-ripple {
   position: absolute;
   pointer-events: none;

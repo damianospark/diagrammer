@@ -41,7 +41,8 @@ export default async function middleware(req: NextRequest) {
       '/api/auth',
       '/api/checkout/session',
       '/api/stripe/webhook',
-      '/api/test-mode'
+      '/api/test-mode',
+      '/api/logs' // 개발용 로그 API
     ]
 
     const isPublicApi = publicApiRoutes.some(route =>

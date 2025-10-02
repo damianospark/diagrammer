@@ -1,6 +1,7 @@
 "use client"
 
 import { GuestCanvas, GuestCanvasHandle } from "@/components/canvas/GuestCanvas"
+import { KonvaCanvas } from "@/components/canvas/KonvaCanvas"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,6 +18,38 @@ import { cn } from "@/lib/utils"
 
 // Types
 export type Engine = "mermaid" | "visjs"
+
+// Konva 다이어그램 데이터 타입
+interface DiagramData {
+  shapes: DiagramShape[]
+  connections: DiagramConnection[]
+  viewport: { x: number; y: number; zoom: number }
+}
+
+interface DiagramShape {
+  id: string
+  type: 'rect' | 'circle' | 'diamond' | 'hexagon' | 'triangle' | 'ellipse'
+  x: number
+  y: number
+  width: number
+  height: number
+  text: string
+  fill: string
+  stroke: string
+  strokeWidth: number
+  fontSize: number
+  fontFamily: string
+}
+
+interface DiagramConnection {
+  id: string
+  fromId: string
+  toId: string
+  stroke: string
+  strokeWidth: number
+  dashEnabled?: boolean
+  arrowEnabled?: boolean
+}
 
 // 채팅 메시지 타입 정의
 interface ChatMessage {
@@ -62,7 +95,7 @@ export default function Workspace() {
   const [openRootId, setOpenRootId] = useState<string | null>(null)
   const [workspaceMode, setWorkspaceMode] = useState<'guest' | 'member'>('guest')
   const [splitPct, setSplitPct] = useState(30)
-  const [downloading, setDownloading] = useState({ png: false, svg: false, copy: false })
+  const [downloading, setDownloading] = useState({ png: false, svg: false, copy: false, pptx: false, pptxFile: false })
   const [shareInfo, setShareInfo] = useState<{ id: string; pin: string; url: string; title?: string } | null>(null)
   const [shareTitleDraft, setShareTitleDraft] = useState<string>("")
   const [shareMode, setShareMode] = useState<'form' | 'result' | 'conflict' | null>(null)
@@ -285,14 +318,8 @@ export default function Workspace() {
     // 기본값: mermaid를 우선
     return 'mermaid'
   }
-  // 추천 프롬프트 정의
-  const SUGGESTIONS = [
-    "사용자 로그인 플로우 만들어줘",
-    "상품 구매 프로세스 다이어그램",
-    "회사 조직도 작성해줘",
-    "데이터베이스 ER 다이어그램",
-    "웹 서비스 아키텍처 만들어줘"
-  ];
+  // 렌더링 모드 상태
+  const [renderMode, setRenderMode] = useState<'mermaid' | 'konva'>('mermaid')
 
   // 비코드 메시지에 포함된 마크다운 코드펜스를 탐지해 칩(언어) + 코드 본문만 렌더링
   function renderMessageContent(text?: string) {
@@ -766,26 +793,7 @@ export default function Workspace() {
     }
   }, [downloading.png, guestCanvasRef, t, toast])
 
-  const exportSVG = useCallback(async () => {
-    if (!guestCanvasRef.current || downloading.svg) return
-    setDownloading(prev => ({ ...prev, svg: true }))
-    try {
-      const svg = guestCanvasRef.current.getSVG()
-      if (!svg) throw new Error('SVG 생성 실패')
-      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'diagram.svg'
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-      toast({ title: t('완료') || '완료', description: t('SVG로 저장되었습니다.') || 'SVG로 저장되었습니다.' })
-    } catch (err: any) {
-      toast({ title: t('오류') || '오류', description: err?.message || 'SVG export error', variant: 'destructive' })
-    } finally {
-      setDownloading(prev => ({ ...prev, svg: false }))
-    }
-  }, [downloading.svg, guestCanvasRef, t, toast])
+  // SVG 다운로드 기능은 제거됨 (SVG 복사로 대체)
 
   const exportCopyImage = useCallback(async () => {
     if (!guestCanvasRef.current || downloading.copy) return
@@ -798,7 +806,7 @@ export default function Workspace() {
       if (canWriteImage) {
         const item = new ClipboardItem({ [blob.type]: blob })
         await navigator.clipboard.write([item as any])
-        toast({ title: t('복사됨') || '복사됨', description: t('이미지가 클립보드에 복사되었습니다.') || '이미지가 클립보드에 복사되었습니다.' })
+        toast({ title: t('복사됨') || '복사됨', description: t('PNG 이미지가 클립보드에 복사되었습니다.') || 'PNG 이미지가 클립보드에 복사되었습니다.' })
       } else if (navigator?.clipboard?.writeText) {
         // Fallback: copy as data URL text
         const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -808,16 +816,104 @@ export default function Workspace() {
           fr.readAsDataURL(blob)
         })
         await navigator.clipboard.writeText(dataUrl)
-        toast({ title: t('복사됨') || '복사됨', description: t('브라우저 제한으로 데이터 URL로 복사되었습니다. 붙여넣기 후 이미지로 인식되지 않으면 PNG 저장을 사용하세요.') || '브라우저 제한으로 데이터 URL로 복사되었습니다. 붙여넣기 후 이미지로 인식되지 않으면 PNG 저장을 사용하세요.' })
+        toast({ title: t('복사됨') || '복사됨', description: t('브라우저 제한으로 데이터 URL로 복사되었습니다.') || '브라우저 제한으로 데이터 URL로 복사되었습니다.' })
       } else {
         throw new Error('클립보드 API를 지원하지 않는 환경입니다')
       }
     } catch (err) {
-      toast({ title: t('오류') || '오류', description: t('이미지 복사에 실패했습니다. PNG 저장 기능을 이용해주세요.') || '이미지 복사에 실패했습니다. PNG 저장 기능을 이용해주세요.', variant: 'destructive' })
+      toast({ title: t('오류') || '오류', description: t('PNG 복사에 실패했습니다.') || 'PNG 복사에 실패했습니다.', variant: 'destructive' })
     } finally {
       setDownloading(prev => ({ ...prev, copy: false }))
     }
   }, [downloading.copy, guestCanvasRef, t, toast])
+
+  const exportCopySVG = useCallback(async () => {
+    if (!guestCanvasRef.current || downloading.svg) return
+    setDownloading(prev => ({ ...prev, svg: true }))
+    try {
+      const svg = guestCanvasRef.current.getSVG()
+      if (!svg) throw new Error('SVG 생성 실패')
+      
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(svg)
+        toast({ title: t('복사됨') || '복사됨', description: t('SVG 코드가 클립보드에 복사되었습니다.') || 'SVG 코드가 클립보드에 복사되었습니다.' })
+      } else {
+        throw new Error('클립보드 API를 지원하지 않는 환경입니다')
+      }
+    } catch (err: any) {
+      toast({ title: t('오류') || '오류', description: err?.message || 'SVG 복사에 실패했습니다.', variant: 'destructive' })
+    } finally {
+      setDownloading(prev => ({ ...prev, svg: false }))
+    }
+  }, [downloading.svg, guestCanvasRef, t, toast])
+
+  const exportCopyPPTX = useCallback(async () => {
+    if (!selectedVersion || downloading.pptx) return
+    setDownloading(prev => ({ ...prev, pptx: true }))
+    try {
+      // Konva 데이터를 PPTX 호환 데이터로 변환
+      const diagramData = convertMermaidToKonvaData(selectedVersion.code)
+      
+      const response = await fetch('/api/v1/export/pptx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...diagramData,
+          format: 'clipboard'
+        })
+      })
+      
+      if (!response.ok) throw new Error('PPTX 데이터 생성 실패')
+      
+      const clipboardData = await response.json()
+      
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(JSON.stringify(clipboardData.data))
+        toast({ title: t('복사됨') || '복사됨', description: t('PPTX 데이터가 클립보드에 복사되었습니다. PowerPoint에서 붙여넣으세요.') || 'PPTX 데이터가 클립보드에 복사되었습니다. PowerPoint에서 붙여넣으세요.' })
+      } else {
+        // 폴백: 파일 다운로드
+        await exportPPTXFile()
+      }
+    } catch (err: any) {
+      toast({ title: t('오류') || '오류', description: err?.message || 'PPTX 복사에 실패했습니다.', variant: 'destructive' })
+    } finally {
+      setDownloading(prev => ({ ...prev, pptx: false }))
+    }
+  }, [downloading.pptx, selectedVersion, t, toast])
+
+  const exportPPTXFile = useCallback(async () => {
+    if (!selectedVersion || downloading.pptxFile) return
+    setDownloading(prev => ({ ...prev, pptxFile: true }))
+    try {
+      // Konva 데이터를 PPTX 파일로 변환
+      const diagramData = convertMermaidToKonvaData(selectedVersion.code)
+      
+      const response = await fetch('/api/v1/export/pptx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...diagramData,
+          format: 'file'
+        })
+      })
+      
+      if (!response.ok) throw new Error('PPTX 파일 생성 실패')
+      
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'diagram.pptx'
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      
+      toast({ title: t('완료') || '완료', description: t('PPTX 파일이 다운로드되었습니다.') || 'PPTX 파일이 다운로드되었습니다.' })
+    } catch (err: any) {
+      toast({ title: t('오류') || '오류', description: err?.message || 'PPTX 저장에 실패했습니다.', variant: 'destructive' })
+    } finally {
+      setDownloading(prev => ({ ...prev, pptxFile: false }))
+    }
+  }, [downloading.pptxFile, selectedVersion, t, toast])
 
   // Canvas render status
   function onCanvasRendered(status: 'ok' | 'error', message?: string) {
@@ -1301,13 +1397,25 @@ export default function Workspace() {
 
             {/* 인라인 드래프트 편집으로 전환됨 (별도 에디터 제거) */}
 
-            {/* Suggestions */}
+            {/* Render Mode Selection */}
             <div className="mt-3 flex flex-wrap gap-2">
-              {SUGGESTIONS.map((s, i) => (
-                <Button key={i} size="sm" variant="outline" onClick={() => setInput(prev => (prev ? prev + "\n" + s : s))}>
-                  <Sparkles className="h-4 w-4 mr-1" /> {s}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">렌더링 모드:</span>
+                <Button 
+                  size="sm" 
+                  variant={renderMode === 'mermaid' ? 'default' : 'outline'}
+                  onClick={() => setRenderMode('mermaid')}
+                >
+                  Mermaid.js
                 </Button>
-              ))}
+                <Button 
+                  size="sm" 
+                  variant={renderMode === 'konva' ? 'default' : 'outline'}
+                  onClick={() => setRenderMode('konva')}
+                >
+                  Konva.js
+                </Button>
+              </div>
               {intent && <span className="text-xs px-2 py-1 rounded-full bg-muted text-foreground">의도: {intent}</span>}
             </div>
 
@@ -1362,47 +1470,11 @@ export default function Workspace() {
               <CardTitle className="text-base flex-shrink-0">캔버스</CardTitle>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <Button
-                  title="PNG로 저장"
-                  aria-label="PNG로 저장"
+                  title="PNG 이미지 복사"
+                  aria-label="PNG 이미지 복사"
                   size="sm"
                   variant="outline"
                   disabled={downloading.png || !selectedVersion}
-                  onClick={(event) => {
-                    triggerRipple(event)
-                    void exportPNG()
-                  }}
-                  data-ripple-color="rgba(255,255,255,0.45)"
-                  className={cn(
-                    "canvas-action-btn canvas-action-btn--png",
-                    downloading.png && "is-loading"
-                  )}
-                >
-                  {downloading.png ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-1 h-4 w-4" />} PNG
-                </Button>
-                <Button
-                  title="SVG로 저장"
-                  aria-label="SVG로 저장"
-                  size="sm"
-                  variant="outline"
-                  disabled={downloading.svg || !selectedVersion}
-                  onClick={(event) => {
-                    triggerRipple(event)
-                    void exportSVG()
-                  }}
-                  data-ripple-color="rgba(255,255,255,0.38)"
-                  className={cn(
-                    "canvas-action-btn canvas-action-btn--svg",
-                    downloading.svg && "is-loading"
-                  )}
-                >
-                  {downloading.svg ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />} SVG
-                </Button>
-                <Button
-                  title="이미지 복사"
-                  aria-label="이미지 복사"
-                  size="sm"
-                  variant="outline"
-                  disabled={downloading.copy || !selectedVersion}
                   onClick={(event) => {
                     triggerRipple(event)
                     void exportCopyImage()
@@ -1413,7 +1485,61 @@ export default function Workspace() {
                     downloading.copy && "is-loading"
                   )}
                 >
-                  {downloading.copy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Copy className="mr-1 h-4 w-4" />} 복사
+                  {downloading.copy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Copy className="mr-1 h-4 w-4" />} PNG 복사
+                </Button>
+                <Button
+                  title="SVG 복사"
+                  aria-label="SVG 복사"
+                  size="sm"
+                  variant="outline"
+                  disabled={downloading.svg || !selectedVersion}
+                  onClick={(event) => {
+                    triggerRipple(event)
+                    void exportCopySVG()
+                  }}
+                  data-ripple-color="rgba(255,255,255,0.38)"
+                  className={cn(
+                    "canvas-action-btn canvas-action-btn--svg",
+                    downloading.svg && "is-loading"
+                  )}
+                >
+                  {downloading.svg ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Copy className="mr-1 h-4 w-4" />} SVG 복사
+                </Button>
+                <Button
+                  title="PPTX 복사"
+                  aria-label="PPTX 복사"
+                  size="sm"
+                  variant="outline"
+                  disabled={downloading.pptx || !selectedVersion}
+                  onClick={(event) => {
+                    triggerRipple(event)
+                    void exportCopyPPTX()
+                  }}
+                  data-ripple-color="rgba(255,255,255,0.35)"
+                  className={cn(
+                    "canvas-action-btn canvas-action-btn--pptx",
+                    downloading.pptx && "is-loading"
+                  )}
+                >
+                  {downloading.pptx ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Copy className="mr-1 h-4 w-4" />} PPTX 복사
+                </Button>
+                <Button
+                  title="PPTX 파일 저장"
+                  aria-label="PPTX 파일 저장"
+                  size="sm"
+                  variant="outline"
+                  disabled={downloading.pptxFile || !selectedVersion}
+                  onClick={(event) => {
+                    triggerRipple(event)
+                    void exportPPTXFile()
+                  }}
+                  data-ripple-color="rgba(255,255,255,0.32)"
+                  className={cn(
+                    "canvas-action-btn canvas-action-btn--pptx-file",
+                    downloading.pptxFile && "is-loading"
+                  )}
+                >
+                  {downloading.pptxFile ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />} PPTX 저장
                 </Button>
                 <Button
                   title="코드 파일 저장"
@@ -1551,16 +1677,26 @@ export default function Workspace() {
             ) : (
               <div className="flex flex-1 items-center justify-center overflow-hidden">
                 {workspaceMode === 'guest' ? (
-                  <GuestCanvas
-                    ref={guestCanvasRef as any}
-                    code={selectedVersion.status === 'draft' ? (livePreviewCode || selectedVersion.code) : selectedVersion.code}
-                    engine={selectedVersion.status === 'draft' ? (livePreviewEngine || selectedVersion.engine) : selectedVersion.engine}
-                    title={selectedVersion.title}
-                    onRendered={onCanvasRendered}
-                  />
+                  renderMode === 'mermaid' ? (
+                    <GuestCanvas
+                      ref={guestCanvasRef as any}
+                      code={selectedVersion.status === 'draft' ? (livePreviewCode || selectedVersion.code) : selectedVersion.code}
+                      engine={selectedVersion.status === 'draft' ? (livePreviewEngine || selectedVersion.engine) : selectedVersion.engine}
+                      title={selectedVersion.title}
+                      onRendered={onCanvasRendered}
+                    />
+                  ) : (
+                    <KonvaCanvas
+                      ref={guestCanvasRef as any}
+                      code={selectedVersion.status === 'draft' ? (livePreviewCode || selectedVersion.code) : selectedVersion.code}
+                      engine={selectedVersion.status === 'draft' ? (livePreviewEngine || selectedVersion.engine) : selectedVersion.engine}
+                      title={selectedVersion.title}
+                      onRendered={onCanvasRendered}
+                    />
+                  )
                 ) : (
                   <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-                    회원 편집 모드는 React Flow 기반으로 구현 예정입니다.
+                    회원 편집 모드는 Konva.js 기반으로 구현 예정입니다.
                   </div>
                 )}
               </div>
@@ -1600,4 +1736,70 @@ function uid(): string {
 // 프롬프트 요약 함수
 function summarizePrompt(text: string): string {
   return text.length > 30 ? text.substring(0, 30) + '...' : text
+}
+
+// Mermaid 코드를 Konva 데이터로 변환하는 함수
+function convertMermaidToKonvaData(mermaidCode: string) {
+  // 간단한 Mermaid 파싱 (실제로는 더 복잡한 파서가 필요)
+  const lines = mermaidCode.split('\n').filter(line => line.trim())
+  const shapes: any[] = []
+  const connections: any[] = []
+  
+  let nodeCounter = 0
+  const nodeMap = new Map<string, any>()
+  
+  lines.forEach((line, index) => {
+    const trimmed = line.trim()
+    
+    // 노드 정의 파싱 (예: A["텍스트"], B("원형"), C{"다이아몬드"})
+    const nodeMatch = trimmed.match(/([A-Z]\w*)\[(.*?)\]|([A-Z]\w*)\((.*?)\)|([A-Z]\w*)\{(.*?)\}/)
+    if (nodeMatch) {
+      const nodeId = nodeMatch[1] || nodeMatch[3] || nodeMatch[5]
+      const text = nodeMatch[2] || nodeMatch[4] || nodeMatch[6] || nodeId
+      const type = nodeMatch[2] ? 'rect' : nodeMatch[4] ? 'circle' : 'diamond'
+      
+      const shape = {
+        id: nodeId,
+        type,
+        x: (nodeCounter % 3) * 200 + 100,
+        y: Math.floor(nodeCounter / 3) * 150 + 100,
+        width: type === 'circle' ? 80 : 120,
+        height: type === 'circle' ? 80 : 60,
+        text: text.replace(/"/g, ''),
+        fill: '#ffffff',
+        stroke: '#000000',
+        strokeWidth: 2,
+        fontSize: 14,
+        fontFamily: 'Arial'
+      }
+      
+      shapes.push(shape)
+      nodeMap.set(nodeId, shape)
+      nodeCounter++
+    }
+    
+    // 연결선 파싱 (예: A --> B, A --- B)
+    const connectionMatch = trimmed.match(/([A-Z]\w*)\s*(-->|---|\.->)\s*([A-Z]\w*)/)
+    if (connectionMatch) {
+      const fromId = connectionMatch[1]
+      const toId = connectionMatch[3]
+      const lineType = connectionMatch[2]
+      
+      connections.push({
+        id: `${fromId}-${toId}`,
+        fromId,
+        toId,
+        stroke: '#000000',
+        strokeWidth: 2,
+        dashEnabled: lineType === '.->',
+        arrowEnabled: lineType.includes('>')
+      })
+    }
+  })
+  
+  return {
+    shapes,
+    connections,
+    viewport: { x: 0, y: 0, zoom: 1 }
+  }
 }
